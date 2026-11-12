@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>PONG</title>
+<style>
+    body {
+        margin: 0;
+        background: black;
+        overflow: hidden;
+        color: white;
+        font-family: Arial;
+        text-align: center;
+    }
+
+    canvas {
+        display: block;
+        margin: auto;
+        background: #111;
+    }
+
+    #score {
+        position: fixed;
+        top: 10px;
+        width: 100%;
+        font-size: 20px;
+    }
+	
+	#info {
+    color: white;
+    margin-top: 20px;
+    font-size: 18px;
+}
+</style>
+</head>
+<body>
+  <a href="pong0.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+
+<div id="score">Pelaaja 1: 0 | Pelaaja 2: 0</div>
+<canvas id="game" width="800" height="500"></canvas>
+
+<div id="info">
+    Pelaaja 1 Liikuu W ja S  |  Pelaaja 2 Liikuu ylös/alas nuolista
+</div>
+
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let score1 = 0;
+let score2 = 0;
+
+const paddleWidth = 10;
+const paddleHeight = 100;
+
+let p1Y = 200;
+let p2Y = 200;
+
+const ball = {
+    x: 400,
+    y: 250,
+    vx: 5,
+    vy: 3,
+    size: 10
+};
+
+let keys = {};
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function resetBall(direction) {
+    ball.x = 400;
+    ball.y = 250;
+    ball.vx = 5 * direction;
+    ball.vy = (Math.random() * 6 - 3);
+}
+
+function update() {
+    // Pelaaja 1 (W/S)
+    if (keys["w"] && p1Y > 0) p1Y -= 6;
+    if (keys["s"] && p1Y < canvas.height - paddleHeight) p1Y += 6;
+
+    // Pelaaja 2 (nuoli ylös/alas)
+    if (keys["ArrowUp"] && p2Y > 0) p2Y -= 6;
+    if (keys["ArrowDown"] && p2Y < canvas.height - paddleHeight) p2Y += 6;
+
+    // Pallo
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // seinät
+    if (ball.y <= 0 || ball.y >= canvas.height) {
+        ball.vy *= -1;
+    }
+
+    // Pelaaja 1 maila
+    if (
+        ball.x <= 20 &&
+        ball.y > p1Y &&
+        ball.y < p1Y + paddleHeight
+    ) {
+ball.vx *= -1.1;
+
+// Kimpoamiskulma mailan osumakohdan mukaan
+let hitPos = ball.y - (p1Y + paddleHeight / 2);
+ball.vy = hitPos * 0.15;
+
+ball.x = 20;
+    }
+
+// Pelaaja 2 maila
+if (
+    ball.x >= canvas.width - 20 &&
+    ball.y > p2Y &&
+    ball.y < p2Y + paddleHeight
+) {
+    ball.vx *= -1.1;
+
+    // Kimpoamiskulma
+    let hitPos = ball.y - (p2Y + paddleHeight / 2);
+    ball.vy = hitPos * 0.15;
+
+    // Siirrä pallo mailan ulkopuolelle
+    ball.x = canvas.width - 20 - ball.size;
+}
+
+    // pisteet
+    if (ball.x < 0) {
+        score2++;
+        resetBall(1);
+    }
+
+    if (ball.x > canvas.width) {
+        score1++;
+        resetBall(-1);
+    }
+
+    document.getElementById("score").textContent =
+        `Pelaaja 1: ${score1} | Pelaaja 2: ${score2}`;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // keskiviiva
+    ctx.fillStyle = "#333";
+    for (let i = 0; i < canvas.height; i += 20) {
+        ctx.fillRect(canvas.width / 2 - 1, i, 2, 10);
+    }
+
+    // mailat
+    ctx.fillStyle = "white";
+    ctx.fillRect(10, p1Y, paddleWidth, paddleHeight);
+    ctx.fillRect(canvas.width - 20, p2Y, paddleWidth, paddleHeight);
+
+    // pallo
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Hiljainen Maailma</title>
+
+<style>
+body{
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:sans-serif;
+  overflow:hidden;
+}
+
+canvas{
+  display:block;
+  margin:0 auto;
+  background:#1b5e20;
+}
+
+/* INVENTORY */
+#ui{
+  position:fixed;
+  top:10px;
+  left:10px;
+  background:rgba(0,0,0,0.7);
+  padding:10px;
+  display:none;
+}
+
+#grid{
+  display:grid;
+  grid-template-columns:repeat(2,60px);
+  grid-template-rows:repeat(3,60px);
+  gap:5px;
+}
+
+.slot{
+  width:60px;
+  height:60px;
+  background:#333;
+  border:2px solid #666;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+}
+
+/* DIALOG */
+#dialogue{
+  position:fixed;
+  bottom:0;
+  left:0;
+  width:100%;
+  background:rgba(0,0,0,0.9);
+  padding:15px;
+  display:none;
+}
+
+#startScreen{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:black;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+}
+
+#pauseMenu{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.9);
+  display:none;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:9;
+}
+
+button{ padding:8px; margin:5px; }
+
+</style>
+</head>
+
+<body>
+
+<div id="startScreen">
+  <h1>Hiljainen Maailma</h1>
+  <button onclick="newGame()">Uusi Peli</button>
+  <button onclick="continueGame()">Jatka Peliä</button>
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button class="valikko" style="transition: all 0.3s ease; position:absolute; top:550px; right:520px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin Pelivalikoon</button>
+  </a>
+
+</div>
+
+<div id="pauseMenu">
+  <h1>PAUSE</h1>
+  <button onclick="saveAndQuit()">Tallenna ja lopeta</button>
+  <button onclick="restartGame()">Aloita uudestaan</button>
+  <button onclick="resumeGame()">Jatka</button>
+</div>
+
+<div id="ui">
+  <div id="grid"></div>
+</div>
+
+<div id="dialogue">
+  <div id="text"></div>
+  <div id="options"></div>
+</div>
+
+<canvas id="game" width="800" height="500"></canvas>
+
+<div id="endScreen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+background:black;color:white;z-index:999;flex-direction:column;justify-content:center;align-items:center;">
+  
+  <p>Lyöt vasaralla ovea...</p>
+  <br>
+  <br>
+  <p>...heräät siihen että joku on rikkonut ovesi...</p>
+  <p>....ja sitten muistat oudon unen jonka näit....</p>
+  <br>
+  <br>
+  <h1>LOPPU</h1>
+  <br>
+  <br>
+  <br>
+  <p>#Mainos KOKEILE PELATA PINNAN ALLA! #Mainos</p>
+
+  <button onclick="backToStart()">Palaa alkuun</button>
+</div>
+
+<div style="position:absolute; top:50px; right:30px;">
+<h2>Liiku WASD </h2>
+<h2>Pause P</h2>
+<h2>Tutki F</h2>
+<h2>Reppu E</h2>
+</div>
+
+<script>
+
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+canvas.style.pointerEvents = "auto";
+document.getElementById("endScreen").style.pointerEvents = "auto";
+
+let player={x:400,y:250,speed:3};
+let keys={};
+
+let state="menu";
+
+let inventory=["","","","","",""];
+let bankUsed=false;
+let inBank=false;
+let inventoryVisible=false;
+let coffeeTaken = false;
+let coins = 0;
+let coinTaken = false;
+
+let world = 1; // 1 = alku, 2 = uusi maailma
+let hasTraveled = false;
+
+let hammerBought = false;
+
+let houseUnlocked = false;
+let inHouse = false;
+
+// ---------------- INPUT ----------------
+document.addEventListener("keydown",e=>{
+  keys[e.key]=true;
+
+  if(e.key.toLowerCase()==="e"){
+    inventoryVisible = !inventoryVisible;
+    document.getElementById("ui").style.display =
+      inventoryVisible ? "block" : "none";
+
+    updateInventoryUI();
+  }
+
+if(e.key.toLowerCase()==="f"){
+  checkBank();
+  checkMarket();
+  checkPark();
+  checkTent();
+  checkShop();
+  checkHouse(); 
+}
+
+  if(e.key.toLowerCase()==="p"){
+    togglePause();
+  }
+});
+
+document.addEventListener("keyup",e=>{
+  keys[e.key]=false;
+});
+
+// ---------------- INVENTORY ----------------
+function updateInventoryUI(){
+  let grid=document.getElementById("grid");
+  grid.innerHTML="";
+
+  for(let i=0;i<6;i++){
+    let slot=document.createElement("div");
+    slot.className="slot";
+    slot.innerText=inventory[i] || "";
+    grid.appendChild(slot);
+  }
+}
+
+function addItem(item){
+  for(let i=0;i<inventory.length;i++){
+    if(inventory[i]===""){
+      inventory[i]=item;
+      updateInventoryUI();
+      return;
+    }
+  }
+}
+
+// ---------------- BANK ----------------
+function checkBank(){
+if(world !== 1) return;
+
+  if(state!=="playing") return;
+
+  let inBankArea =
+    player.x > 600 &&
+    player.x < 740 &&
+    player.y > 200 &&
+    player.y < 380;
+
+  if(!inBankArea) return;
+
+  document.getElementById("dialogue").style.display="block";
+
+  if(bankUsed){
+    setText("Pankki: olet jo saanut näkkileivän.");
+    document.getElementById("options").innerHTML=
+      `<button onclick="closeDialog()">Selvä</button>`;
+    inBank=true;
+    return;
+  }
+
+  openBankDialog();
+}
+
+function openBankDialog(){
+  inBank=true;
+
+  setText("Pankki: 'Perustelkaa miksi tarvitsette rahaa.'");
+
+  document.getElementById("options").innerHTML=`
+    <button onclick="choose()">En tiedä</button>
+    <button onclick="choose()">Olen nälkäinen</button>
+  `;
+}
+
+function choose(){
+  setText("Pankki: tässä on näkkileipä.");
+  addItem("🍞");
+  bankUsed=true;
+
+  document.getElementById("options").innerHTML=
+    `<button onclick="closeDialog()">Selvä</button>`;
+}
+
+function closeDialog(){
+  document.getElementById("dialogue").style.display="none";
+  inBank=false;
+}
+
+function setText(t){
+  document.getElementById("text").innerText=t;
+}
+
+//----------------------------------------
+function checkMarket(){
+if(world !== 1) return;
+
+  let inMarket =
+    player.x < 200 &&
+    player.y < 150;
+
+  if(!inMarket) return;
+
+  document.getElementById("dialogue").style.display="block";
+
+  if(coffeeTaken){
+    setText("Tori: Pöytä on tyhjä");
+    document.getElementById("options").innerHTML=
+      `<button onclick="closeDialog()">Selvä</button>`;
+    inBank=true;
+    return;
+  }
+
+  setText("Tori: pöydällä on kylmä kahvi. Otatko sen?");
+
+  document.getElementById("options").innerHTML=`
+    <button onclick="takeCoffee()">Ota kahvi</button>
+    <button onclick="closeDialog()">Jätä</button>
+  `;
+}
+
+function takeCoffee(){
+  addItem("☕");
+  coffeeTaken = true;
+
+  setText("Otit kahvin. Huomaat kyltin jossa lukee: #Mainos KOKEILE PELATA PINNAN ALLA! #Mainos");
+  document.getElementById("options").innerHTML=
+    `<button onclick="closeDialog()">Selvä</button>`;
+}
+
+//----------------------------------------
+function checkPark(){
+
+if(world !== 1) return;
+  let inPark =
+    player.x > 600 &&
+    player.y < 150;
+
+  if(!inPark) return;
+
+  document.getElementById("dialogue").style.display="block";
+
+  if(coinTaken){
+    setText("Puisto: täältä ei löydy enää kolikoita.");
+    document.getElementById("options").innerHTML =
+      `<button onclick="closeDialog()">Selvä</button>`;
+    return;
+  }
+
+  setText("Puisto: maassa kiiltää kolikko. Otatko sen?");
+
+  document.getElementById("options").innerHTML=`
+    <button onclick="takeCoin()">Ota kolikko</button>
+    <button onclick="closeDialog()">Jätä</button>
+  `;
+}
+
+function takeCoin(){
+  coinTaken = true;
+  coins++;
+
+  addItem("🪙");
+
+  setText("Sait kolikon!");
+  document.getElementById("options").innerHTML=
+    `<button onclick="closeDialog()">Selvä</button>`;
+}
+
+//----------------------------------------
+function checkTent(){
+
+  let inTent =
+    player.x > 350 &&
+    player.x < 450 &&
+    player.y > 220 &&
+    player.y < 320;
+
+  if(!inTent) return;
+
+  document.getElementById("dialogue").style.display="block";
+
+  let hasBread = inventory.includes("🍞");
+  let hasCoffee = inventory.includes("☕");
+
+  if(hasTraveled){
+    setText("Teltta: olet jo matkustanut.");
+    document.getElementById("options").innerHTML=
+      `<button onclick="closeDialog()">Selvä</button>`;
+    return;
+  }
+
+  if(hasBread && hasCoffee){
+    setText("Teltta: matkustaminen mahdollista. Haluatko lähteä?");
+    document.getElementById("options").innerHTML=`
+      <button onclick="travel()">Matkusta</button>
+      <button onclick="closeDialog()">Jää</button>
+    `;
+  } else {
+    setText("Teltta: tarvitset 1 leivän, 1 kahvin ja 1 kolikon.");
+    document.getElementById("options").innerHTML=
+      `<button onclick="closeDialog()">Selvä</button>`;
+  }
+}
+
+function travel(){
+
+  let breadIndex = inventory.indexOf("🍞");
+  let coffeeIndex = inventory.indexOf("☕");
+
+  if(breadIndex === -1 || coffeeIndex === -1){
+    setText("Tarvitset leivän ja kahvin matkustaaksesi.");
+    document.getElementById("options").innerHTML=
+      `<button onclick="closeDialog()">Selvä</button>`;
+    return;
+  }
+
+  // kuluta items
+  inventory[breadIndex] = "";
+  inventory[coffeeIndex] = "";
+
+  updateInventoryUI();
+
+  world = 2;
+  hasTraveled = true;
+
+  player.x = 400;
+  player.y = 250;
+
+  setText("Matkustat uuteen maailmaan...");
+
+  document.getElementById("options").innerHTML=
+    `<button onclick="closeDialog()">Jatka</button>`;
+}
+
+//----------------------------------------
+function checkShop(){
+
+  if(world !== 2) return;
+
+  let inShop =
+    player.x < 120 &&
+    player.y > 180 &&
+    player.y < 320;
+
+  if(!inShop) return;
+
+  document.getElementById("dialogue").style.display="block";
+
+  if(hammerBought){
+    setText("Kauppa: olet jo ostanut vasaran.");
+    document.getElementById("options").innerHTML =
+      `<button onclick="closeDialog()">Selvä</button>`;
+    return;
+  }
+
+  setText("Kauppa: vasara maksaa 1 kolikon. Ostatko?");
+
+  document.getElementById("options").innerHTML=`
+    <button onclick="buyHammer()">Osta vasara</button>
+    <button onclick="closeDialog()">Jätä</button>
+  `;
+}
+
+function buyHammer(){
+
+  if(coins < 1){
+    setText("Sinulla ei ole kolikkoa.");
+    document.getElementById("options").innerHTML=
+      `<button onclick="closeDialog()">Selvä</button>`;
+    return;
+  }
+
+  coins -= 1;
+  hammerBought = true;
+
+  addItem("🔨");
+
+  setText("Ostit vasaran!");
+  document.getElementById("options").innerHTML=
+    `<button onclick="closeDialog()">Selvä</button>`;
+}
+
+// ---------------- START ----------------
+function newGame(){
+  player.x=400;
+  player.y=250;
+
+  inventory=["","","","","",""];
+  bankUsed=false;
+
+  updateInventoryUI();
+
+  state="playing";
+  document.getElementById("startScreen").style.display="none";
+}
+
+function continueGame(){
+  const data=JSON.parse(localStorage.getItem("save"));
+  if(!data){ alert("Ei tallennusta!"); return; }
+
+  player.x=data.x;
+  player.y=data.y;
+
+  inventory=data.inventory || ["","","","","",""];
+  bankUsed=data.bankUsed || false;
+
+  world = data.world || 1;          // 🔥 TÄRKEIN FIX
+  coffeeTaken = data.coffeeTaken || false;
+  coinTaken = data.coinTaken || false;
+  coins = data.coins || 0;
+  hasTraveled = data.hasTraveled || false;
+
+  updateInventoryUI();
+
+  state="playing";
+  document.getElementById("startScreen").style.display="none";
+}
+//----------------------------------------
+function checkHouse(){
+
+  if(world !== 2) return;
+
+  let nearHouse =
+    player.x < 120 &&
+    player.y < 120;
+
+  if(!nearHouse) return;
+
+  document.getElementById("dialogue").style.display="block";
+
+  let hasHammer = inventory.includes("🔨");
+
+  if(houseUnlocked){
+    setText("Talo: olet jo sisällä.");
+    document.getElementById("options").innerHTML =
+      `<button onclick="closeDialog()">Selvä</button>`;
+    return;
+  }
+
+  if(!hasHammer){
+    setText("Talon ovi on lukossa. Tarvitset vasaran.");
+    document.getElementById("options").innerHTML =
+      `<button onclick="closeDialog()">Selvä</button>`;
+    return;
+  }
+
+  setText("Haluatko rikkoa oven vasaralla ja mennä sisään?");
+
+  document.getElementById("options").innerHTML=`
+    <button onclick="enterHouse()">Mene sisään</button>
+    <button onclick="closeDialog()">Jätä</button>
+  `;
+}
+
+function enterHouse(){
+  houseUnlocked = true;
+  inHouse = true;
+
+  closeDialog();
+  showEndScreen();
+}
+// ---------------- PAUSE ----------------
+function togglePause(){
+  if(state==="playing"){
+    state="paused";
+    document.getElementById("pauseMenu").style.display="flex";
+  }
+}
+
+function resumeGame(){
+  state="playing";
+  document.getElementById("pauseMenu").style.display="none";
+}
+
+function saveAndQuit(){
+  localStorage.setItem("save", JSON.stringify({
+    x:player.x,
+    y:player.y,
+    inventory:inventory,
+    bankUsed:bankUsed,
+    world:world,        // 🔥 LISÄTTY
+    coffeeTaken:coffeeTaken,
+    coinTaken:coinTaken,
+    coins:coins,
+    hasTraveled:hasTraveled
+  }));
+
+  location.reload();
+}
+
+function showEndScreen(){
+  state = "end";
+  document.getElementById("endScreen").style.display = "flex";
+}
+
+function backToStart(){
+  document.getElementById("endScreen").style.display = "none";
+  document.getElementById("startScreen").style.display = "flex";
+
+  state = "menu";
+
+  player.x = 400;
+  player.y = 250;
+
+  world = 1;
+  houseUnlocked = false;
+  inHouse = false;
+}
+
+function restartGame(){
+  location.reload();
+}
+
+// ---------------- UPDATE ----------------
+function update(){
+  if(keys["w"]) player.y-=player.speed;
+  if(keys["s"]) player.y+=player.speed;
+  if(keys["a"]) player.x-=player.speed;
+  if(keys["d"]) player.x+=player.speed;
+}
+
+// ---------------- WORLD 2 COLLISION ----------------
+if(world === 2){
+
+  // vasen reuna
+  if(player.x < 10) player.x = 10;
+
+  // oikea reuna
+  if(player.x > 790) player.x = 790;
+
+  // yläreuna
+  if(player.y < 10) player.y = 10;
+
+  // alareuna
+  if(player.y > 490) player.y = 490;
+}
+
+// ---------------- DRAW ----------------
+function draw(){
+
+  // 🌍 tausta maailman mukaan
+  if(world === 1){
+    ctx.fillStyle="#1b5e20";
+  } else {
+    ctx.fillStyle="#0d1b2a";
+  }
+
+  ctx.fillRect(0,0,800,500);
+
+  // 🌍 WORLD 1
+  if(world === 1){
+
+    // pankki
+    ctx.fillStyle="rgba(0,0,255,0.2)";
+    ctx.fillRect(600,200,200,300);
+
+    ctx.fillStyle="white";
+    ctx.fillRect(660,300,80,80);
+    ctx.fillStyle="white";
+    ctx.fillText("PANKKI",610,220);
+
+    // tori
+    ctx.fillStyle="rgba(255,255,0,0.15)";
+    ctx.fillRect(0,0,200,150);
+
+    // kahvi toriin
+    ctx.fillStyle="#3e2723";
+    ctx.beginPath();
+    ctx.arc(110,75,6,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="white";
+    ctx.font="12px sans-serif";
+    ctx.fillText("TORI",10,20);
+
+    // puisto
+    ctx.fillStyle="rgba(0,255,0,0.15)";
+    ctx.fillRect(600,0,200,150);
+
+    // puun runko
+    ctx.fillStyle="#5d4037";
+    ctx.fillRect(680,60,20,40);
+
+    // lehvästö
+    ctx.fillStyle="green";
+    ctx.beginPath();
+    ctx.arc(690,50,25,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle="white";
+    ctx.fillText("PUISTO",610,20);
+
+    // teltta
+    ctx.fillStyle="rgba(150,75,0,0.3)";
+    ctx.fillRect(350,220,100,80);
+
+    ctx.fillStyle="#6d4c41";
+    ctx.beginPath();
+    ctx.moveTo(350,300);
+    ctx.lineTo(400,220);
+    ctx.lineTo(450,300);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle="white";
+    ctx.fillText("TELTTA",365,215);
+  }
+
+// 🌌 WORLD 2 (PUOLET VIHREÄ / PUOLET SININEN)
+if(world === 2){
+
+  // vasen puoli (vihreä)
+  ctx.fillStyle="#3db535";
+  ctx.fillRect(0,0,550,500);
+
+  // oikea puoli (tumma sininen / outo maailma)
+  ctx.fillStyle="#0a82fa";
+  ctx.fillRect(500,0,400,500);
+
+  // otsikko
+  ctx.fillStyle="white";
+  ctx.font="26px sans-serif";
+  ctx.fillText("Satama", 360, 40);
+  // 🏠 TALO (vasen yläkulma)
+ctx.fillStyle="#8d6e63";
+ctx.fillRect(20,20,100,80);
+
+// katto
+ctx.fillStyle="#5d4037";
+ctx.beginPath();
+ctx.moveTo(20,20);
+ctx.lineTo(70,0);
+ctx.lineTo(120,20);
+ctx.closePath();
+ctx.fill();
+
+// ovi (kiinni/auki)
+ctx.fillStyle=houseUnlocked ? "#2e7d32" : "#3e2723";
+ctx.fillRect(60,60,25,40);
+
+ctx.fillStyle="white";
+ctx.font="10px sans-serif";
+ctx.fillText("TALO",25,15);
+
+// 🏪 KAUPPA (WORLD 2 vasen reuna keskellä)
+ctx.fillStyle="#795548";
+ctx.fillRect(0,180,120,140);
+
+ctx.fillStyle="white";
+ctx.font="12px sans-serif";
+ctx.fillText("KAUPPA", 20, 200);
+
+// ovi
+ctx.fillStyle="#3e2723";
+ctx.fillRect(40,220,40,60);
+
+    // teltta
+
+    ctx.fillStyle="#6d4c41";
+    ctx.beginPath();
+    ctx.moveTo(350,300);
+    ctx.lineTo(400,220);
+    ctx.lineTo(450,300);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle="white";
+    ctx.fillText("TELTTA",355,215);
+	
+}  
+	  // 👤 pelaaja (aina päällä)
+  ctx.fillStyle="yellow";
+  ctx.beginPath();
+  ctx.arc(player.x,player.y,10,0,Math.PI*2);
+  ctx.fill();
+} 
+
+
+
+
+
+// ---------------- LOOP ----------------
+function loop(){
+  if(state==="playing"){
+    update();
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+</script>
+
+</body>
+</html>

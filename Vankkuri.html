@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Vankkurikehä</title>
+<style>
+  body { margin:0; overflow:hidden; background:#cfe9c7; font-family:Arial; }
+  canvas { display:block; }
+  #restartBtn{
+    position:absolute;
+    left:50%;
+    top:80%;
+    transform:translate(-50%,-50%);
+    padding:12px 18px;
+    font-size:20px;
+    display:none;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<h2>Väistä hyökkäjiä ja ammu niitä / Ammu = Hiiren vasen / Liiku = WASD / Pause = P</h2>
+
+<canvas id="game"></canvas>
+<button id="restartBtn">Uudestaan</button>
+
+<a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+  <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">
+    ⬅️ Takaisin
+  </button>
+</a>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const restartBtn = document.getElementById("restartBtn");
+
+const center = { x: canvas.width/2, y: canvas.height/2 };
+
+let player, bullets, enemies, keys, mouse, gameOver, paused, score, highscore;
+
+const wagonSize = { w: 90, h: 50 };
+
+
+// ✅ OMA HIGH SCORE AVAIN TÄHÄN PELIIN
+function loadHighscore(){
+  return Number(localStorage.getItem("vankkuri_highscore") || 0);
+}
+
+function saveHighscore(v){
+  localStorage.setItem("vankkuri_highscore", v);
+}
+
+function init(){
+  player = { x:center.x, y:center.y, r:10, lives:3 };
+  bullets = [];
+  enemies = [];
+  keys = {};
+  mouse = {x:center.x,y:center.y};
+  gameOver = false;
+  paused = false;
+
+  score = 0;
+  highscore = loadHighscore();
+
+  restartBtn.style.display = "none";
+}
+
+init();
+
+// 🚛 vankkurit
+const wagons = [];
+const wagonCount = 8;
+const radius = 200;
+
+for(let i=0;i<wagonCount;i++){
+  let a = (Math.PI*2/wagonCount)*i;
+  wagons.push({
+    x:center.x+Math.cos(a)*radius,
+    y:center.y+Math.sin(a)*radius
+  });
+}
+
+// 🎮 input
+window.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+  if(e.key.toLowerCase() === "p") paused = !paused;
+});
+
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+window.addEventListener("mousemove", e => { mouse.x=e.clientX; mouse.y=e.clientY; });
+window.addEventListener("mousedown", shoot);
+
+restartBtn.addEventListener("click", init);
+
+// 🔫 ammus
+function shoot(){
+  if(gameOver || paused) return;
+  let dx = mouse.x - player.x;
+  let dy = mouse.y - player.y;
+  let d = Math.hypot(dx,dy);
+  if(d===0) return;
+
+  bullets.push({
+    x:player.x,
+    y:player.y,
+    vx:dx/d*7,
+    vy:dy/d*7,
+    r:4
+  });
+}
+
+// 👾 viholliset
+function spawnEnemy(){
+  if(gameOver || paused) return;
+
+  let angle = Math.random()*Math.PI*2;
+  let dist = Math.max(canvas.width,canvas.height);
+
+  enemies.push({
+    x:center.x + Math.cos(angle)*dist,
+    y:center.y + Math.sin(angle)*dist,
+    r:12,
+    speed:1.5
+  });
+}
+setInterval(spawnEnemy, 800);
+
+// 🧱 collision
+function circleRectCollision(px,py,pr, rect){
+  let rx = rect.x - wagonSize.w/2;
+  let ry = rect.y - wagonSize.h/2;
+
+  let closestX = Math.max(rx, Math.min(px, rx + wagonSize.w));
+  let closestY = Math.max(ry, Math.min(py, ry + wagonSize.h));
+
+  let dx = px - closestX;
+  let dy = py - closestY;
+
+  return (dx*dx + dy*dy) < pr*pr;
+}
+
+// 💀 game over
+function endGame(){
+  gameOver = true;
+
+  if(score > highscore){
+    highscore = score;
+    saveHighscore(highscore);
+  }
+
+  restartBtn.style.display = "block";
+}
+
+// 🔁 update
+function update(){
+  if(gameOver || paused) return;
+
+  let prevX = player.x;
+  let prevY = player.y;
+
+  if(keys["w"]) player.y -= 3;
+  if(keys["s"]) player.y += 3;
+  if(keys["a"]) player.x -= 3;
+  if(keys["d"]) player.x += 3;
+
+  for(let w of wagons){
+    if(circleRectCollision(player.x,player.y,player.r,w)){
+      player.x = prevX;
+      player.y = prevY;
+      break;
+    }
+  }
+
+  bullets.forEach((b,i)=>{
+    b.x += b.vx;
+    b.y += b.vy;
+    if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height) bullets.splice(i,1);
+  });
+
+  enemies.forEach((e,ei)=>{
+    let prevEx = e.x;
+    let prevEy = e.y;
+
+    let dx = player.x - e.x;
+    let dy = player.y - e.y;
+    let d = Math.hypot(dx,dy);
+    if(d===0) return;
+
+    e.x += dx/d*e.speed;
+    e.y += dy/d*e.speed;
+
+    for(let w of wagons){
+      if(circleRectCollision(e.x,e.y,e.r,w)){
+        e.x = prevEx;
+        e.y = prevEy;
+        break;
+      }
+    }
+
+    if(d < e.r + player.r){
+      player.lives--;
+      enemies.splice(ei,1);
+      if(player.lives <= 0) endGame();
+    }
+
+    bullets.forEach((b,bi)=>{
+      let dx2=e.x-b.x;
+      let dy2=e.y-b.y;
+
+      if(Math.hypot(dx2,dy2)<e.r){
+        enemies.splice(ei,1);
+        bullets.splice(bi,1);
+        score += 1;
+      }
+    });
+  });
+}
+
+// 🎨 draw
+function draw(){
+  ctx.fillStyle="#cfe9c7";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  wagons.forEach(w=>{
+    ctx.fillStyle="#8b5a2b";
+    ctx.fillRect(w.x-wagonSize.w/2, w.y-wagonSize.h/2, wagonSize.w, wagonSize.h);
+  });
+
+  ctx.fillStyle="blue";
+  ctx.beginPath();
+  ctx.arc(player.x,player.y,player.r,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="black";
+  bullets.forEach(b=>{
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  ctx.fillStyle="red";
+  enemies.forEach(e=>{
+    ctx.beginPath();
+    ctx.arc(e.x,e.y,e.r,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  ctx.fillStyle="black";
+  ctx.font="20px Arial";
+  ctx.fillText("Score: " + score,20,30);
+  ctx.fillText("Highscore: " + highscore,20,60);
+  ctx.fillText("HP: " + player.lives,20,90);
+
+  if(paused && !gameOver){
+    ctx.fillStyle="rgba(0,0,0,0.5)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="white";
+    ctx.font="60px Arial";
+    ctx.fillText("PAUSED", canvas.width/2-120, canvas.height/2);
+  }
+
+  if(gameOver){
+    ctx.fillStyle="rgba(0,0,0,0.5)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="white";
+    ctx.font="50px Arial";
+ctx.fillText("Kuolit!", canvas.width/2-100, canvas.height/2 - 100);
+ctx.fillText("Score: "+score, canvas.width/2-100, canvas.height/2 - 40);
+ctx.fillText("Highscore: "+highscore, canvas.width/2-150, canvas.height/2 + 20);
+  }
+}
+
+// 🔁 loop
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+</script>
+</body>
+</html>

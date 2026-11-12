@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Metsä vihaa sinua</title>
+<style>
+  body { margin:0; overflow:hidden; background:#bfe8b1; font-family: Arial; }
+  canvas { display:block; margin:auto; }
+  #uiBtn {
+    position:absolute;
+    left:50%;
+    top:80%;
+    transform:translate(-50%,-50%);
+    padding:12px 20px;
+    font-size:20px;
+    display:none;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<h2>Väistä puita / Liiku = WASD / Pause = P</h2>
+<canvas id="game"></canvas>
+<button id="uiBtn">Uudestaan</button>
+<a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+  <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+</a>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const btn = document.getElementById("uiBtn");
+
+let player, keys, enemies, score, highscore1, gameOver, paused;
+let spawnInterval;
+
+function init(){
+  player = { x: canvas.width/2, y: canvas.height/2, size: 10, speed: 3, health: 100 };
+  keys = {};
+  enemies = [];
+  score = 0;
+  gameOver = false;
+  paused = false;
+
+  highscore1 = localStorage.getItem("highscore1") || 0;
+
+  spawnInterval = setInterval(spawnEnemy, 1200);
+
+  btn.style.display = "none";
+}
+
+init();
+
+window.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+
+  if(e.key.toLowerCase() === "p"){
+    paused = !paused;
+  }
+});
+
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+function spawnEnemy(){
+  if(gameOver || paused) return;
+
+  let isOak = Math.random() < 0.3;
+
+  enemies.push({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    size: 14,
+    speed: isOak ? 2.2 : 1 + Math.random()*1.2,
+    type: isOak ? "oak" : "normal"
+  });
+}
+
+function endGame(){
+  if(gameOver) return;
+  gameOver = true;
+  clearInterval(spawnInterval);
+
+  if(score > highscore1){
+    highscore1 = score;
+    localStorage.setItem("highscore1", highscore1);
+  }
+
+  btn.style.display = "block";
+}
+
+btn.addEventListener("click", () => {
+  init();
+});
+
+function update(){
+  if(gameOver || paused) return;
+
+  if(keys["w"]) player.y -= player.speed;
+  if(keys["s"]) player.y += player.speed;
+  if(keys["a"]) player.x -= player.speed;
+  if(keys["d"]) player.x += player.speed;
+
+  score += 1;
+
+  enemies.forEach((e, i) => {
+    let dx = player.x - e.x;
+    let dy = player.y - e.y;
+    let dist = Math.hypot(dx, dy);
+
+    if(dist === 0) return;
+
+    e.x += dx/dist * e.speed;
+    e.y += dy/dist * e.speed;
+
+    if(dist < player.size + e.size){
+      if(e.type === "oak"){
+        player.health -= 0.2;
+        enemies.splice(i,1);
+        return;
+      } else {
+        player.health -= 0.5;
+      }
+    }
+  });
+
+  if(player.health <= 0){
+    endGame();
+  }
+}
+
+function drawTree(x,y,size,type){
+  if(type === "oak"){
+    ctx.fillStyle = "#25d991";
+    ctx.fillRect(x-4, y, 8, size+4);
+    ctx.fillStyle = "#2e8b57";
+  } else {
+    ctx.fillStyle = "#41a650";
+    ctx.fillRect(x-3, y, 6, size);
+    ctx.fillStyle = "green";
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(x, y - size);
+  ctx.lineTo(x - size, y);
+  ctx.lineTo(x + size, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function draw(){
+  ctx.fillStyle = "#bfe8b1";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = "lime";
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.size, 0, Math.PI*2);
+  ctx.fill();
+
+  enemies.forEach(e => drawTree(e.x,e.y,e.size,e.type));
+
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText("Score: " + score, 20, 30);
+  ctx.fillText("Highscore: " + highscore1, 20, 60);
+  ctx.fillText("Health: " + Math.max(0, Math.floor(player.health)), 20, 90);
+
+  if(paused && !gameOver){
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "white";
+    ctx.font = "50px Arial";
+    ctx.fillText("PAUSED", canvas.width/2 - 100, canvas.height/2);
+  }
+
+  if(gameOver){
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+ctx.fillText("Kuolit!", canvas.width/2-80, canvas.height/2 - 90);
+ctx.fillText("Score: "+score, canvas.width/2-80, canvas.height/2 - 50);
+ctx.fillText("Highscore: "+highscore1, canvas.width/2-130, canvas.height/2 + 1);
+  }
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

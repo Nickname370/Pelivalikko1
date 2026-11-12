@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aikahyppy</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0f1220;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    canvas {
+      display: block;
+      margin: auto;
+      image-rendering: pixelated;
+      border: 4px solid #4cf0ff;
+      margin-top: 20px;
+      transition: background 0.2s;
+    }
+
+    .ui {
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .time { font-size: 22px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<div class="ui">
+  <div class="time" id="timeLabel">MENNEISYYS</div>
+  <div>Liiku AD / Nuolet Oikealle ja Vasemmalle | Hyppy W/ Nuoli Ylös | SPACE aikahyppy | Tavoite: Mene sinisen palikan läpi</div>
+</div>
+
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+<canvas id="game" width="960" height="540"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const TILE = 48;
+
+const keys = {};
+
+let future = false;
+let switchCooldown = false;
+
+// ================= TILEMAP =================
+// 0 = tyhjä
+// 1 = seinä (aina)
+// 2 = silta (vain menneisyys)
+// 3 = ovi (vain menneisyys)
+// 4 = future-only block
+const map = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+  [1,0,0,1,0,0,0,0,0,0,4,0,0,0,0,1,3,0,0,1],
+  [1,1,2,1,0,0,0,0,0,0,4,0,0,0,0,1,1,1,0,1],
+  [1,0,0,0,0,0,0,0,4,4,1,1,0,0,0,1,0,0,4,1],
+  [1,0,0,0,0,2,2,0,0,0,0,1,0,0,0,1,0,1,1,1],
+  [1,0,4,4,0,0,0,0,0,0,0,1,0,0,0,1,2,0,0,1],
+  [1,2,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,4,4,1],
+  [1,4,0,0,0,0,0,0,0,0,0,1,0,0,0,2,0,0,2,1],
+  [1,4,4,0,0,0,0,0,0,0,0,1,0,0,0,2,0,2,2,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+// ================= PLAYER =================
+const player = {
+  x: 2 * TILE,
+  y: 2 * TILE,
+  w: 28,
+  h: 28,
+  vx: 0,
+  vy: 0,
+  speed: 3,
+  jump: 10,
+  onGround: false
+};
+
+const gravity = 0.5;
+
+// ================= INPUT =================
+document.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+
+  if (e.code === "Space" && !switchCooldown) {
+    future = !future;
+    switchCooldown = true;
+    setTimeout(()=>switchCooldown=false,300);
+
+    document.getElementById("timeLabel").textContent = future ? "NYKYISYYS" : "MENNEISYYS";
+  }
+});
+
+document.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// ================= COLLISION =================
+function solidTile(t) {
+  if (t === 1) return true;
+  if (!future && t === 2) return true;
+  if (!future && t === 3) return false;
+  if (future && t === 4) return true;
+  return t === 1;
+}
+
+function rectCollide(a,b){
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+
+function moveAndCollide() {
+  player.x += player.vx;
+
+  for (let y=0;y<map.length;y++){
+    for (let x=0;x<map[y].length;x++){
+      const t = map[y][x];
+
+      // FIX: älä törmää menneisyyden objekteihin tulevaisuudessa
+      if (future && (t === 2 || t === 3)) continue;
+      if (!future && t === 4) continue;
+
+      if (solidTile(t)){
+        let r = {x:x*TILE,y:y*TILE,w:TILE,h:TILE};
+        if(rectCollide(player,r)) player.x -= player.vx;
+      }
+    }
+  }
+
+  player.y += player.vy;
+  player.onGround = false;
+
+  for (let y=0;y<map.length;y++){
+    for (let x=0;x<map[y].length;x++){
+      const t = map[y][x];
+
+      if (future && (t === 2 || t === 3)) continue;
+      if (!future && t === 4) continue;
+
+      if (solidTile(t)){
+        let r = {x:x*TILE,y:y*TILE,w:TILE,h:TILE};
+        if(rectCollide(player,r)){
+          player.y -= player.vy;
+          player.vy = 0;
+          player.onGround = true;
+        }
+      }
+    }
+  }
+}
+
+// ================= UPDATE =================
+function update(){
+  player.vx = 0;
+
+  if(keys["a"]||keys["arrowleft"]) player.vx = -player.speed;
+  if(keys["d"]||keys["arrowright"]) player.vx = player.speed;
+
+  if((keys["w"]||keys["arrowup"]) && player.onGround){
+    player.vy = -player.jump;
+  }
+  
+  // ================= MAALI =================
+for (let y = 0; y < map.length; y++) {
+  for (let x = 0; x < map[y].length; x++) {
+    if (map[y][x] === 3) {
+      let r = { x: x * TILE, y: y * TILE, w: TILE, h: TILE };
+
+      if (rectCollide(player, r) && !future) {
+        alert("Voitit! 🎉");
+        player.x = 2 * TILE;
+        player.y = 2 * TILE;
+        player.vx = 0;
+        player.vy = 0;
+      }
+    }
+  }
+}
+
+  player.vy += gravity;
+
+  moveAndCollide();
+}
+
+// ================= DRAW =================
+function draw(){
+  const bg = future ? "#2b1414" : "#142b14";
+  canvas.style.backgroundColor = bg;
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  for(let y=0;y<map.length;y++){
+    for(let x=0;x<map[y].length;x++){
+      const t = map[y][x];
+
+      if(t === 0) continue;
+
+      // FIX: menneisyyden objektit EI näy tulevaisuudessa
+      if(future && (t === 2 || t === 3)) continue;
+
+      // future-only block
+      if(!future && t === 4) continue;
+
+      if(t===1) ctx.fillStyle = "#555";
+      if(t===2) ctx.fillStyle = "#c49a4a";
+      if(t===3) ctx.fillStyle = "#4cf0ff";
+      if(t===4) ctx.fillStyle = "#ff4cf0";
+
+      ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+    }
+  }
+
+  ctx.fillStyle="white";
+  ctx.fillRect(player.x,player.y,player.w,player.h);
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

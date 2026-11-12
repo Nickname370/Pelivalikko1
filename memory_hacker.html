@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Muistin murtaja</title>
+
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #111;
+  color: white;
+}
+
+h1 {
+  margin-top: 20px;
+}
+
+#game {
+  margin-top: 30px;
+}
+
+.sequence {
+  font-size: 40px;
+  letter-spacing: 10px;
+  margin: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  gap: 15px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.btn {
+  width: 100px;
+  height: 100px;
+  font-size: 30px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: 0.2s;
+}
+
+/* 🔴 Muistamisvaihe */
+.red {
+  background: #e53935;
+}
+
+/* 🟢 Pelaajan vuoro */
+.green {
+  background: #4CAF50;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+}
+
+#status {
+  margin-top: 20px;
+  font-size: 20px;
+}
+
+#startBtn {
+  padding: 10px 20px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+
+#startBtn:hover {
+  background: #45a049;
+}
+
+#highscore {
+  font-size: 20px;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🧠 Muistin murtaja</h1>
+<p>Muista järjestys ja klikkaa oikein!</p>
+
+<a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+  <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+</a>
+
+<p id="highscore">🏆 Highscore: 0</p>
+
+<button id="startBtn">Aloita peli</button>
+
+<div id="game" style="display:none;">
+  <div class="sequence" id="sequence"></div>
+  <div class="grid" id="grid"></div>
+  <div id="status"></div>
+</div>
+
+
+<div id="secretMessage" style="display:none; margin-top:20px; font-size:24px; color:lime;">
+  MAAILMA on aika HILJAINEN
+</div>
+<script>
+let sequence = [];
+let playerInput = [];
+let level = 1;
+let showing = false;
+
+
+// 🔥 Highscore
+let highscore = localStorage.getItem("memoryHighscore") || 0;
+
+const sequenceDiv = document.getElementById("sequence");
+const grid = document.getElementById("grid");
+const statusDiv = document.getElementById("status");
+const startBtn = document.getElementById("startBtn");
+const highscoreText = document.getElementById("highscore");
+
+highscoreText.textContent = "🏆 Highscore: " + highscore;
+
+// Luo napit 1–9
+for (let i = 1; i <= 9; i++) {
+  let btn = document.createElement("button");
+  btn.textContent = i;
+  btn.className = "btn";
+  btn.onclick = () => handleClick(i);
+  grid.appendChild(btn);
+}
+
+startBtn.onclick = startGame;
+
+function setButtonsColor(colorClass) {
+  const buttons = document.querySelectorAll(".btn");
+  buttons.forEach(btn => {
+    btn.classList.remove("red", "green");
+    btn.classList.add(colorClass);
+  });
+}
+
+function startGame() {
+  sequence = [];
+  level = 1;
+  document.getElementById("game").style.display = "block";
+  startBtn.style.display = "none";
+  nextLevel();
+}
+
+function nextLevel() {
+  playerInput = [];
+  sequence.push(Math.floor(Math.random() * 9) + 1);
+  showSequence();
+}
+
+function showSequence() {
+  showing = true;
+
+  setButtonsColor("red"); // 🔴 punainen
+
+  sequenceDiv.textContent = sequence.join(" ");
+  statusDiv.textContent = "Muista...";
+
+  setTimeout(() => {
+    sequenceDiv.textContent = "";
+    statusDiv.textContent = "Sinun vuoro!";
+    showing = false;
+
+    setButtonsColor("green"); // 🟢 vihreä
+
+  }, 1000 + level * 300);
+}
+
+function handleClick(num) {
+  if (showing) return;
+
+  playerInput.push(num);
+
+  let currentIndex = playerInput.length - 1;
+
+  if (playerInput[currentIndex] !== sequence[currentIndex]) {
+    gameOver();
+    return;
+  }
+
+if (playerInput.length === sequence.length) {
+  level++;
+
+  statusDiv.textContent = "✔ Oikein! Taso " + level;
+
+  // 🔐 SALAINEN VIESTI
+  if (level >= 5) {
+    document.getElementById("secretMessage").style.display = "block";
+  }
+
+  setTimeout(nextLevel, 800);
+}
+}
+
+function gameOver() {
+  // 🔥 Highscore
+  if (level > highscore) {
+    highscore = level;
+    localStorage.setItem("memoryHighscore", highscore);
+    highscoreText.textContent = "🏆 Highscore: " + highscore;
+  }
+
+  statusDiv.textContent = "💀 Väärin! Pääsit tasolle " + level;
+  startBtn.style.display = "inline-block";
+  startBtn.textContent = "Pelaa uudestaan";
+
+  setButtonsColor("red"); // jää punaiseksi lopussa
+}
+
+</script>
+
+</body>
+</html>

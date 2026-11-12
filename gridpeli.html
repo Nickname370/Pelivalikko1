@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8" />
+<title>Ruutuja ja Arkkuja</title>
+
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  canvas { background: #222; }
+
+  #info {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-family: Arial, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
+    font-size: 18px;
+    line-height: 1.5;
+    white-space: pre-line;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+<a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+  <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+</a>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const tileSize = 40;
+
+/*
+0 = lattia
+1 = seinä
+2 = portaikko
+3 = arkku
+4 = vihollinen
+5 = miekka
+6 = maali
+*/
+
+const levels = [
+  {
+    name: "Taso 1 - Aloitus",
+    map: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,1,1,0,0,0,0,0,1],
+      [1,0,1,1,0,1,1,0,0,1],
+      [1,0,1,0,0,0,1,0,0,1],
+      [1,0,1,0,1,0,1,0,0,1],
+      [1,0,0,0,1,0,0,0,2,1],
+      [1,5,1,0,0,3,1,1,4,1],
+      [1,0,1,0,1,0,0,0,0,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ]
+  },
+  {
+    name: "Taso 2",
+    map: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,1,0,0,0,0,1],
+      [1,0,1,0,1,0,1,1,0,1],
+      [1,0,1,0,4,0,1,0,0,1],
+      [1,0,1,1,1,0,1,0,3,1],
+      [1,0,0,0,1,0,0,0,2,1],
+      [1,1,1,0,1,1,1,0,0,1],
+      [1,0,0,0,0,0,1,0,0,1],
+      [1,0,1,1,1,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ]
+  },
+  {
+    name: "Taso 3",
+    map: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,1,0,0,0,0,0,3,1],
+      [1,0,1,1,0,1,1,0,0,1],
+      [1,0,0,0,0,0,1,0,0,1],
+      [1,1,1,0,1,0,1,1,0,1],
+      [1,0,0,0,1,0,4,0,2,1],
+      [1,0,1,0,1,1,1,0,0,1],
+      [1,0,1,0,0,0,1,0,0,1],
+      [1,0,4,0,1,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ]
+  },
+  {
+    name: "Taso 4",
+    map: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,4,1],
+      [1,0,0,0,0,0,2,1,0,1],
+      [1,0,1,1,1,1,1,1,0,1],
+      [1,0,0,0,1,3,3,1,0,1],
+      [1,1,1,0,1,0,0,1,0,1],
+      [1,3,1,0,1,4,1,1,0,1],
+      [1,4,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ]
+  },
+  {
+    name: "Taso 5",
+    map: [
+      [1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,1,0,0,0,0,3,1],
+      [1,0,1,1,0,1,1,0,0,1],
+      [1,0,0,0,0,4,1,1,0,1],
+      [1,1,0,1,1,0,0,1,1,1],
+      [1,0,0,0,1,0,5,1,6,1],
+      [1,1,1,4,1,1,1,1,0,1],
+      [1,0,0,0,0,1,1,0,0,1],
+      [1,3,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1],
+    ]
+  }
+];
+
+let levelIndex = 0;
+let map = levels[levelIndex].map;
+
+canvas.width = map[0].length * tileSize;
+canvas.height = map.length * tileSize;
+
+let player = { x: 1, y: 1 };
+
+let hp = 3;
+let swordPower = 0;
+let chests = 0;
+let enemiesKilled = 0;
+let gameEnded = false;
+let win = false;
+
+function endGame(isWin){
+  if(gameEnded) return;
+  gameEnded = true;
+  win = isWin;
+}
+
+function showEndScreen(){
+  ctx.fillStyle="rgba(0,0,0,0.85)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle="white";
+  ctx.textAlign="center";
+
+  ctx.font="40px Arial";
+  ctx.fillText(win?"🎉 VOITIT PELIN":"💀 KUOLIT",canvas.width/2,canvas.height/2-60);
+
+  ctx.fillStyle="#00ff88";
+  ctx.fillRect(canvas.width/2-80,canvas.height/2,160,50);
+
+  ctx.fillStyle="black";
+  ctx.font="18px Arial";
+  ctx.fillText("Pelaa uudestaan",canvas.width/2,canvas.height/2+30);
+}
+
+function updateText(){
+  if(gameEnded) return;
+
+  const info = document.getElementById("info");
+
+  info.textContent =
+`Liiku = WASD 🟦=Voima 🟨=Arkku 🟥=Vihollinen 🟩=Portaat
+📍 ${levels[levelIndex].name}
+❤️ HP: ${hp}
+⚔️ Voima: ${swordPower}
+🧰 Arkut: ${chests}
+💀 Viholliset voitettu: ${enemiesKilled}`;
+}
+
+function drawMap(){
+  for(let y=0;y<map.length;y++){
+    for(let x=0;x<map[y].length;x++){
+      let t=map[y][x];
+
+      ctx.fillStyle =
+        t===1?"#555":
+        t===2?"#00aa00":
+        t===3?"yellow":
+        t===4?"red":
+        t===5?"cyan":
+        t===6?"green":"#2a2a2a";
+
+      ctx.fillRect(x*tileSize,y*tileSize,tileSize,tileSize);
+
+      if(t===4){
+        ctx.fillStyle="white";
+        ctx.textAlign="center";
+        ctx.textBaseline="middle";
+        ctx.font="16px Arial";
+
+        ctx.fillText(
+          1,
+          x*tileSize+tileSize/2,
+          y*tileSize+tileSize/2
+        );
+      }
+    }
+  }
+}
+
+function drawPlayer(){
+  ctx.fillStyle="deepskyblue";
+  ctx.fillRect(player.x*tileSize+8,player.y*tileSize+8,tileSize-16,tileSize-16);
+}
+
+function canMove(x,y){
+  return map[y] && map[y][x] !== 1;
+}
+
+function nextLevel(){
+  if(levelIndex >= levels.length-1){
+    endGame(true);
+    return;
+  }
+
+  levelIndex++;
+  map = levels[levelIndex].map;
+  player = {x:1,y:1};
+
+  canvas.width = map[0].length*tileSize;
+  canvas.height = map.length*tileSize;
+
+  updateText();
+}
+
+window.addEventListener("keydown",(e)=>{
+  if(gameEnded) return;
+
+  let nx=player.x, ny=player.y;
+
+  if(e.key==="w")ny--;
+  if(e.key==="s")ny++;
+  if(e.key==="a")nx--;
+  if(e.key==="d")nx++;
+
+  if(!canMove(nx,ny))return;
+
+  player.x=nx;
+  player.y=ny;
+
+  let t=map[ny][nx];
+
+  if(t===3){chests++;map[ny][nx]=0;}
+  if(t===5){
+
+    swordPower++;
+
+    map[ny][nx]=0;
+}
+
+  if(t===4){
+    if(swordPower>=1){
+      enemiesKilled++;
+      map[ny][nx]=0;
+    }else{
+      hp--;
+      if(hp<=0)endGame(false);
+    }
+  }
+
+  if(t===2)setTimeout(nextLevel,100);
+  if(t===6)endGame(true);
+
+  updateText();
+});
+
+canvas.addEventListener("click",()=>{
+  if(gameEnded) location.reload();
+});
+
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(gameEnded) showEndScreen();
+  else{
+    drawMap();
+    drawPlayer();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+updateText();
+loop();
+</script>
+
+</body>
+</html>

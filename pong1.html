@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>PONG</title>
+<style>
+    body {
+        margin: 0;
+        background: black;
+        overflow: hidden;
+        color: white;
+        font-family: Arial;
+        text-align: center;
+    }
+
+    canvas {
+        display: block;
+        margin: auto;
+        background: #111;
+    }
+
+    #score {
+        position: fixed;
+        top: 10px;
+        width: 100%;
+        font-size: 20px;
+    }
+	
+	#info {
+    color: white;
+    margin-top: 20px;
+    font-size: 18px;
+}
+</style>
+</head>
+<body>
+  <a href="pong0.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+
+<div id="score">Pelaaja: 0 | CPU: 0</div>
+<canvas id="game" width="800" height="500"></canvas>
+
+<div id="info">
+    Liiku = W ja S
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let playerScore = 0;
+let cpuScore = 0;
+
+const paddleWidth = 10;
+const paddleHeight = 100;
+
+let playerY = 200;
+let cpuY = 200;
+
+const ball = {
+    x: 400,
+    y: 250,
+    vx: 5,
+    vy: 3,
+    size: 10
+};
+
+let keys = {};
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function resetBall(direction) {
+    ball.x = 400;
+    ball.y = 250;
+    ball.vx = 5 * direction;
+    ball.vy = (Math.random() * 6 - 3);
+}
+
+function update() {
+    // Pelaaja
+    if (keys["w"] && playerY > 0) playerY -= 6;
+    if (keys["s"] && playerY < canvas.height - paddleHeight) playerY += 6;
+
+    // CPU AI (yksinkertainen seuranta)
+    cpuY += (ball.y - (cpuY + paddleHeight / 2)) * 0.03;
+
+    // Pallo
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // Ylä- ja alareuna
+    if (ball.y <= 0 || ball.y >= canvas.height) {
+        ball.vy *= -1;
+    }
+
+    // Pelaajan maila
+if (
+    ball.x <= 20 &&
+    ball.y > playerY &&
+    ball.y < playerY + paddleHeight
+) {
+    ball.vx *= -1.1;
+
+    // Lisää pystysuuntaista kimpoamista
+    let hitPos = ball.y - (playerY + paddleHeight / 2);
+    ball.vy = hitPos * 0.15;
+
+    ball.x = 20;
+}
+
+
+// CPU maila
+if (
+    ball.x >= canvas.width - 20 &&
+    ball.y > cpuY &&
+    ball.y < cpuY + paddleHeight
+) {
+    ball.vx *= -1.1;
+
+    let hitPos = ball.y - (cpuY + paddleHeight / 2);
+    ball.vy = hitPos * 0.15;
+
+    ball.x = canvas.width - 20;
+}
+
+    // pisteet
+    if (ball.x < 0) {
+        cpuScore++;
+        resetBall(1);
+    }
+
+    if (ball.x > canvas.width) {
+        playerScore++;
+        resetBall(-1);
+    }
+
+    document.getElementById("score").textContent =
+        `Pelaaja: ${playerScore} | HELPPO BOTTI: ${cpuScore}`;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // keskiviiva
+    ctx.fillStyle = "#333";
+    for (let i = 0; i < canvas.height; i += 20) {
+        ctx.fillRect(canvas.width / 2 - 1, i, 2, 10);
+    }
+
+    // pelaaja maila
+    ctx.fillStyle = "white";
+    ctx.fillRect(10, playerY, paddleWidth, paddleHeight);
+
+    // CPU maila
+    ctx.fillRect(canvas.width - 20, cpuY, paddleWidth, paddleHeight);
+
+    // pallo
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>

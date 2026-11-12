@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Hyppely Peli</title>
+
+<style>
+body {
+  margin: 0;
+  background: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+canvas {
+  background: #87CEEB;
+}
+	#info {
+    color: white;
+    margin-top: 20px;
+    font-size: 18px;
+	position:absolute;
+	bottom:20px;
+	left:330px;
+}
+</style>
+</head>
+
+<body>
+
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+  
+<div id="info">
+    Liiku AD / Nuolinäppäimet | Hyppää = W / Välilyönti | Kerää kolikoita ja pääse maaliin.
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 900;
+canvas.height = 500;
+
+const TILE = 40;
+
+// kamera
+let camera = { x: 0, y: 0 };
+
+// maailma
+let worldWidth = 0;
+let worldHeight = 0;
+
+// level
+const levels = [
+{
+  name: "Kenttä 1",
+  map: [
+    "X..........................X",
+    "X..........................X",
+    "X..............XX..XX......X",
+    "X.........XXX......CX......X",
+    "X..................XX..G...X",
+    "X....XXX............X......X",
+    "X.S.................X......X",
+    "XXXXXXXXXXXXLLLXXXLLXXXXXXXX"
+  ]
+},
+{
+  name: "Kenttä 2",
+  map: [
+    "X..........................X",
+    "X..........................X",
+    "XC............XXX..XXX.....X",
+    "XXXXX...XXX.........XC...XXX",
+    "X...X...............XXXX..XX",
+    "X............XXX....XXXXX.XX",
+    "X.S.X...............XXXXG.XX",
+    "XXXXXXXXXXXXLLLLLLLLXXXXXXXX"
+  ]
+}
+];
+
+let currentLevel = 0;
+
+let platforms = [];
+let coins = [];
+let lava = [];
+let goal = { x: 0, y: 0 };
+let score = 0;
+
+// player
+let player = {
+  x: 0,
+  y: 0,
+  w: 30,
+  h: 30,
+  vx: 0,
+  vy: 0,
+  onGround: false
+};
+
+// controls
+let keys = {};
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+// load level
+function loadLevel() {
+  platforms = [];
+  coins = [];
+  lava = [];
+
+  const level = levels[currentLevel];
+
+  level.map.forEach((row, y) => {
+    row.split("").forEach((tile, x) => {
+
+      let px = x * TILE;
+      let py = y * TILE;
+
+      if (tile === "X") {
+        platforms.push({ x: px, y: py, w: TILE, h: TILE });
+      }
+
+      if (tile === "C") {
+        coins.push({
+          x: px + 10,
+          y: py + 10,
+          size: 20,
+          collected: false
+        });
+      }
+
+      if (tile === "L") {
+        lava.push({ x: px, y: py, w: TILE, h: TILE });
+      }
+
+      if (tile === "S") {
+        player.x = px;
+        player.y = py;
+      }
+
+      if (tile === "G") {
+        goal.x = px;
+        goal.y = py;
+      }
+
+    });
+  });
+
+  player.vx = 0;
+  player.vy = 0;
+
+  worldWidth = level.map[0].length * TILE;
+  worldHeight = level.map.length * TILE;
+}
+
+loadLevel();
+
+const gravity = 0.6;
+
+// update
+function update() {
+
+  // movement
+  if (keys["a"] || keys["A"] || keys["ArrowLeft"]) player.vx = -5;
+  else if (keys["d"] || keys["D"] || keys["ArrowRight"]) player.vx = 5;
+  else player.vx = 0;
+
+  if ((keys["w"] || keys[" "] || keys["W"]) && player.onGround) {
+    player.vy = -12;
+    player.onGround = false;
+  }
+
+  player.vy += gravity;
+
+  // X collision
+  player.x += player.vx;
+
+  platforms.forEach(p => {
+    if (
+      player.x < p.x + p.w &&
+      player.x + player.w > p.x &&
+      player.y < p.y + p.h &&
+      player.y + player.h > p.y
+    ) {
+      if (player.vx > 0) player.x = p.x - player.w;
+      else if (player.vx < 0) player.x = p.x + p.w;
+    }
+  });
+
+  // Y collision
+  player.y += player.vy;
+  player.onGround = false;
+
+  platforms.forEach(p => {
+    if (
+      player.x < p.x + p.w &&
+      player.x + player.w > p.x &&
+      player.y < p.y + p.h &&
+      player.y + player.h > p.y
+    ) {
+      if (player.vy > 0) {
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      } else if (player.vy < 0) {
+        player.y = p.y + p.h;
+        player.vy = 0;
+      }
+    }
+  });
+
+  // coins
+  coins.forEach(c => {
+    if (!c.collected &&
+      player.x < c.x + c.size &&
+      player.x + player.w > c.x &&
+      player.y < c.y + c.size &&
+      player.y + player.h > c.y
+    ) {
+      c.collected = true;
+      score++;
+    }
+  });
+
+  // lava
+  lava.forEach(l => {
+    if (
+      player.x < l.x + l.w &&
+      player.x + player.w > l.x &&
+      player.y < l.y + l.h &&
+      player.y + player.h > l.y
+    ) {
+      loadLevel();
+    }
+  });
+
+  // goal
+// goal
+if (
+  player.x < goal.x + TILE &&
+  player.x + player.w > goal.x &&
+  player.y < goal.y + TILE &&
+  player.y + player.h > goal.y
+) {
+  currentLevel++; // 👉 SIIRRY SEURAAVAAN
+
+  if (currentLevel >= levels.length) {
+    currentLevel = 0; // palaa alkuun
+  }
+
+  loadLevel();
+}
+
+  // camera
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
+
+  if (camera.x < 0) camera.x = 0;
+  if (camera.y < 0) camera.y = 0;
+
+  if (camera.x > worldWidth - canvas.width)
+    camera.x = worldWidth - canvas.width;
+
+  if (camera.y > worldHeight - canvas.height)
+    camera.y = worldHeight - canvas.height;
+}
+
+// draw
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // platforms
+  ctx.fillStyle = "green";
+  platforms.forEach(p => {
+    ctx.fillRect(p.x - camera.x, p.y - camera.y, p.w, p.h);
+  });
+
+  // lava
+  ctx.fillStyle = "red";
+  lava.forEach(l => {
+    ctx.fillRect(l.x - camera.x, l.y - camera.y, l.w, l.h);
+  });
+
+  // coins
+  ctx.fillStyle = "yellow";
+  coins.forEach(c => {
+    if (!c.collected) {
+      ctx.beginPath();
+      ctx.arc(c.x - camera.x + 10, c.y - camera.y + 10, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // goal
+  ctx.fillStyle = "gold";
+  ctx.fillRect(goal.x - camera.x, goal.y - camera.y, TILE, TILE);
+
+  // player
+  ctx.fillStyle = "blue";
+  ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+
+  // UI
+  ctx.fillStyle = "black";
+  ctx.fillText("Pisteet: " + score, 20, 30);
+}
+
+// loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>

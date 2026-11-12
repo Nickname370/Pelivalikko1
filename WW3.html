@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <title>3. Maailmansota</title>
+  <style>
+    body { margin:0; font-family: Arial; background:#0b1a2a; color:white; overflow:hidden; }
+
+    #world {
+      position:absolute;
+      width:100vw;
+      height:100vh;
+      background:url('https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg');
+      background-size:cover;
+      background-position:center;
+      opacity:0.9;
+    }
+
+    #map { position:absolute; width:100vw; height:100vh; }
+
+    .country { stroke:#111; stroke-width:0.5; cursor:pointer; }
+
+    .player { fill:#1e90ff !important; }
+    .red { fill:#b22222 !important; }
+    .green { fill:#2e8b57 !important; }
+    .purple { fill:#8a2be2 !important; }
+
+    #info {
+      position:absolute; top:10px; left:500px;
+      background:rgba(0,0,0,0.7);
+      padding:10px;
+      border-radius:8px;
+      max-width:320px;
+      z-index:10;
+    }
+  </style>
+</head>
+<body>
+<a href="https://nickname370.github.io/AloitusTest11/valikko3.html"><button>⬅️ Takaisin</button></a>
+<div id="world"></div>
+<div id="info">Klikkaa maata hyökätäksesi</div>
+<svg id="map" viewBox="0 0 1000 500"></svg>
+
+<script>
+const svg = document.getElementById('map');
+
+const MAX_DISTANCE = 120; // säädä tätä tarvittaessa
+
+const countries = [
+  // Eurooppa
+  {id:1, name:"Suomi", x:475, y:85, army:10, owner:"player", neighbors:[2,4,10]},
+  {id:2, name:"Ruotsi", x:440, y:85, army:9, owner:"green", neighbors:[1,23]},
+  {id:4, name:"Saksa", x:435, y:120, army:15, owner:"purple", neighbors:[1,5,23,13]},
+  {id:5, name:"Italia", x:445, y:155, army:9, owner:"red", neighbors:[4,6]},
+  {id:6, name:"Espanja", x:395, y:165, army:8, owner:"green", neighbors:[5,23,20]},
+  {id:23, name:"Iso-Britannia", x:395, y:115, army:15, owner:"red", neighbors:[2,4,6,7,8]},
+
+  // Pohjois-Amerikka
+  {id:7, name:"USA", x:135, y:155, army:40, owner:"green", neighbors:[8,16,23]},
+  {id:8, name:"Kanada", x:155, y:85, army:11, owner:"red", neighbors:[7,23]},
+  {id:16, name:"Meksiko", x:120, y:230, army:9, owner:"purple", neighbors:[7,9]},
+
+  // Etelä-Amerikka
+  {id:9, name:"Brasilia", x:265, y:335, army:10, owner:"green", neighbors:[16,17,26]},
+  {id:17, name:"Argentiina", x:230, y:420, army:9, owner:"purple", neighbors:[9]},
+  {id:26, name:"Peru", x:190, y:335, army:13, owner:"green", neighbors:[9]},
+
+  // Aasia
+  {id:10, name:"Venäjä", x:535, y:85, army:40, owner:"red", neighbors:[1,18,11,19]},
+  {id:18, name:"Kazakstan", x:590, y:130, army:10, owner:"red", neighbors:[10,11,12]},
+  {id:19, name:"Mongolia", x:680, y:130, army:8, owner:"purple", neighbors:[11,10]},
+  {id:11, name:"Kiina", x:710, y:165, army:30, owner:"red", neighbors:[10,18,19,12]},
+  {id:12, name:"Intia", x:640, y:225, army:20, owner:"green", neighbors:[18,11,22]},
+
+  {id:22, name:"Indonesia", x:770, y:315, army:15, owner:"purple", neighbors:[12,15]},
+  {id:25, name:"Japani", x:800, y:160, army:13, owner:"green", neighbors:[11]},
+
+  // Afrikka
+  {id:13, name:"Egypti", x:500, y:210, army:9, owner:"green", neighbors:[4,20,24]},
+  {id:20, name:"Algeria", x:415, y:215, army:8, owner:"red", neighbors:[6,13,24]},
+  {id:21, name:"Kongo", x:480, y:310, army:10, owner:"green", neighbors:[24,14]},
+  {id:14, name:"Etelä-Afrikka", x:485, y:390, army:10, owner:"red", neighbors:[21]},
+  {id:24, name:"Nigeria", x:435, y:270, army:8, owner:"purple", neighbors:[13,20,21]},
+
+  // Oseania
+  {id:15, name:"Australia", x:795, y:395, army:17, owner:"green", neighbors:[22]}
+];
+
+function distance(a, b) {
+  return Math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2);
+}
+
+function getCountryById(id) {
+  return countries.find(c => c.id === id);
+}
+
+function drawMap() {
+  svg.innerHTML = "";
+
+  countries.forEach(c => {
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", c.x);
+    circle.setAttribute("cy", c.y);
+    circle.setAttribute("r", 18);
+    circle.classList.add("country", c.owner);
+
+    circle.addEventListener("click", () => attack(c));
+
+    svg.appendChild(circle);
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", c.x);
+    text.setAttribute("y", c.y + 4);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("fill", "white");
+    text.setAttribute("font-size", "10");
+    text.textContent = c.army;
+    svg.appendChild(text);
+  });
+}
+
+function attack(target) {
+  const playerCountry = countries.find(c => c.owner === "player");
+
+  if (target.owner === "player") {
+    document.getElementById('info').innerText = "Tämä maa on jo sinun.";
+    return;
+  }
+  if (playerCountry.army > target.army) {
+    playerCountry.army += Math.floor(target.army * 0.5);
+    target.army = playerCountry.army;
+    target.owner = "player";
+
+    document.getElementById('info').innerText = `Voitit ${target.name}!`;
+  } else {
+    target.army += Math.floor(playerCountry.army * 0.5);
+    playerCountry.army = 1;
+
+    document.getElementById('info').innerText = `Hävisit ${target.name}.`;
+  }
+
+  drawMap();
+  checkWin();
+}
+
+function incomeTick() {
+  countries.forEach(c => {
+    if (c.owner === "player") {
+      c.army += 2; // pelaaja saa enemmän
+    } else {
+      c.army += 1; // viholliset normaalisti
+    }
+  });
+
+  drawMap();
+}
+
+function checkWin() {
+  const allOwned = countries.every(c => c.owner === "player");
+  if (allOwned) {
+    setTimeout(() => alert("Voitit pelin! 🌍"), 200);
+  }
+}
+
+setInterval(incomeTick, 1200);
+
+drawMap();
+</script>
+
+</body>
+</html>

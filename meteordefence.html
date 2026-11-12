@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Ammu Asteroideja</title>
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: black;
+        color: white;
+        font-family: Arial;
+    }
+
+    #game {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+    }
+
+    .meteor {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: orange;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 10px orange;
+    }
+
+    #scoreboard {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        font-size: 18px;
+    }
+
+    #gameover {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 40px;
+        display: none;
+        text-align: center;
+    }
+
+    #restartBtn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 18px;
+        cursor: pointer;
+        border: none;
+        background: white;
+        color: black;
+    }
+</style>
+</head>
+<body>
+
+<div id="game"></div>
+
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+
+<div id="scoreboard">
+    Pisteet: <span id="score">0</span> |
+	Highscore: <span id="highscore">0</span> |
+    Ohitetut: <span id="missed">0</span>/3 | 3 Ohitettua = Game Over | Klikkaa asteroideja ennen kuin ne osuvat!
+</div>
+
+<div id="gameover">
+    GAME OVER
+    <br>
+    Pisteet: <span id="finalScore">0</span>
+    <br>
+    <button id="restartBtn">Restart</button>
+</div>
+
+<script>
+const game = document.getElementById("game");
+const scoreEl = document.getElementById("score");
+const missedEl = document.getElementById("missed");
+const highscoreEl = document.getElementById("highscore");
+const gameoverEl = document.getElementById("gameover");
+const finalScoreEl = document.getElementById("finalScore");
+const restartBtn = document.getElementById("restartBtn");
+
+let meteors = [];
+let score = 0;
+let missed = 0;
+let speed = 1.5;
+let spawnRate = 1200;
+let running = true;
+
+// HIGH SCORE (meteorHighscore)
+let meteorHighscore = localStorage.getItem("meteorHighscore") || 0;
+highscoreEl.textContent = meteorHighscore;
+
+// Luo meteori
+function createMeteor() {
+    const meteor = document.createElement("div");
+    meteor.classList.add("meteor");
+
+    const x = Math.random() * (window.innerWidth - 30);
+    meteor.style.left = x + "px";
+    meteor.style.top = "-30px";
+
+    let y = -30;
+
+    meteor.onclick = () => {
+        if (!running) return;
+
+        score++;
+        scoreEl.textContent = score;
+
+        meteor.remove();
+        meteors = meteors.filter(m => m.el !== meteor);
+
+        if (score % 10 === 0) {
+            speed += 0.3;
+            spawnRate = Math.max(300, spawnRate - 100);
+        }
+    };
+
+    game.appendChild(meteor);
+    meteors.push({ el: meteor, x: x, y: y });
+}
+
+// Päivitys
+function update() {
+    if (!running) return;
+
+    meteors.forEach((m, index) => {
+        m.y += speed;
+        m.el.style.top = m.y + "px";
+
+        if (m.y > window.innerHeight) {
+            m.el.remove();
+            meteors.splice(index, 1);
+
+            missed++;
+            missedEl.textContent = missed;
+
+            if (missed >= 3) {
+                endGame();
+            }
+        }
+    });
+
+    requestAnimationFrame(update);
+}
+
+// Spawneri
+function spawnLoop() {
+    if (!running) return;
+    createMeteor();
+    setTimeout(spawnLoop, spawnRate);
+}
+
+// GAME OVER
+function endGame() {
+    running = false;
+    gameoverEl.style.display = "block";
+    finalScoreEl.textContent = score;
+
+    if (score > meteorHighscore) {
+        meteorHighscore = score;
+        localStorage.setItem("meteorHighscore", meteorHighscore);
+        highscoreEl.textContent = meteorHighscore;
+    }
+}
+
+// Restart
+restartBtn.onclick = () => {
+    meteors.forEach(m => m.el.remove());
+    meteors = [];
+
+    score = 0;
+    missed = 0;
+    speed = 1.5;
+    spawnRate = 1200;
+    running = true;
+
+    scoreEl.textContent = score;
+    missedEl.textContent = missed;
+
+    gameoverEl.style.display = "none";
+
+    update();
+    spawnLoop();
+};
+
+// Start
+update();
+spawnLoop();
+</script>
+
+</body>
+</html>

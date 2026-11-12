@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirjainten Aakkosjärjestäjä</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f6fa;
+            color: #2f3640;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2f3640;
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 2px solid #dcdde1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            border-color: #00a8ff;
+            outline: none;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            background-color: #00a8ff;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #0097e6;
+        }
+
+        .tulos-alue {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #f1f2f6;
+            border-radius: 6px;
+            border-left: 5px solid #00a8ff;
+            min-height: 50px;
+            white-space: pre-wrap;
+            font-size: 16px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kirjainten Aakkosjärjestäjä</h1>
+    
+    <label for="alkuperainen">Kirjoita teksti tähän:</label>
+    <textarea id="alkuperainen" placeholder="Kirjoita teksti, jonka sanat haluat aakkostaa..."></textarea>
+    
+    <button onclick="jarjestaAakkoset()">Järjestä kirjaimet!</button>
+    
+    <label>Lopputulos aakkosjärjestyksessä:</label>
+    <div id="tulos" class="tulos-alue">Tulos ilmestyy tähän...</div>
+<a href="sekoilu0.html" style="position: absolute; top: 10px; right: 20px; padding: 10px 14px; font-size: 16px; cursor: pointer; text-decoration: none; background-color: #f1f2f6; color: #333; border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif;">
+  ⬅️ Takaisin
+</a>
+
+
+	
+</div>
+
+<script>
+    // Funktio, joka laittaa yksittäisen sanan kirjaimet aakkosjärjestykseen
+    function aakkostaSana(sana) {
+        // Suomen kielen aakkoset huomioiva vertailu (localeCompare)
+        return sana.split('').sort(function(a, b) {
+            return a.localeCompare(b, 'fi');
+        }).join('');
+    }
+
+    // Pääfunktio, joka käsittelee koko tekstin
+    function jarjestaAakkoset() {
+        const syote = document.getElementById('alkuperainen').value;
+        
+        // Etsii kaikki suomen kielen kirjaimet ja korvaa ne aakkostetulla versiolla
+        const sekoitettu = syote.replace(/[a-zA-ZåäöÅÄÖ]+/g, function(sana) {
+            return aakkostaSana(sana);
+        });
+
+        // Näytetään lopputulos käyttäjälle
+        document.getElementById('tulos').innerText = sekoitettu || "Kirjoita ensin tekstiä kenttään.";
+    }
+</script>
+
+</body>
+</html>

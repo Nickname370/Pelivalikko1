@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Avaruus Väistely</title>
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial;
+  background: black;
+  background-image: 
+    radial-gradient(white 1px, transparent 1px),
+    radial-gradient(white 1px, transparent 1px);
+  background-size: 40px 40px, 80px 80px;
+  background-position: 0 0, 20px 20px;
+  animation: starsMove 20s linear infinite;
+  color: white;
+}
+
+@keyframes starsMove {
+  from { background-position: 0 0, 20px 20px; }
+  to { background-position: 0 1000px, 20px 1020px; }
+}
+
+#game {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.lane {
+  position: absolute;
+  bottom: 0;
+  width: 33.33%;
+  height: 100%;
+  border-left: 2px solid rgba(255,255,255,0.1);
+}
+
+.player {
+  position: absolute;
+  bottom: 70px;
+  width: 60px;
+  height: 60px;
+  font-size: 50px;
+  text-align: center;
+  line-height: 60px;
+}
+
+.obstacle {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  font-size: 60px;
+  text-align: center;
+  line-height: 60px;
+}
+
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 20px;
+  z-index: 10;
+}
+
+#startScreen, #pauseScreen {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+#pauseScreen {
+  display: none;
+  font-size: 30px;
+}
+
+#startBtn {
+  padding: 15px 30px;
+  font-size: 20px;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+}
+
+	#info {
+    color: white;
+    margin-top: 20px;
+    font-size: 18px;
+	position:absolute;
+	bottom:20px;
+	left:490px;
+}
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>🚀 Avaruus Väistely</h1>
+  <button id="startBtn">START</button>
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+</div>
+
+<div id="info">
+    Väistä AD / Nuolinäppäimet | Pause = P
+</div>
+
+<div id="pauseScreen">
+  <h1>⏸ PAUSED</h1>
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+</div>
+
+<div id="ui">
+  Pisteet: <span id="score">0</span><br>
+  HP: <span id="hp">3</span>/3<br>
+  Ennätys: <span id="highscore">0</span>
+</div>
+
+<div id="game">
+  <div class="lane" style="left:0%"></div>
+  <div class="lane" style="left:33.33%"></div>
+  <div class="lane" style="left:66.66%"></div>
+
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+
+  <div id="player" class="player">🚀</div>
+</div>
+
+<script>
+let playerLane = 1;
+const player = document.getElementById("player");
+const game = document.getElementById("game");
+const scoreEl = document.getElementById("score");
+const hpEl = document.getElementById("hp");
+const highscoreEl = document.getElementById("highscore");
+const startScreen = document.getElementById("startScreen");
+const pauseScreen = document.getElementById("pauseScreen");
+const startBtn = document.getElementById("startBtn");
+
+let obstacles = [];
+let score = 0;
+let hp = 3;
+let gameOver = false;
+let started = false;
+let paused = false;
+let spawnInterval;
+
+let highscore = localStorage.getItem("space_runner_highscore") || 0;
+highscore = parseInt(highscore);
+highscoreEl.textContent = highscore;
+
+function updatePlayer() {
+  player.style.left = (playerLane * 33.33 + 16.66) + "%";
+}
+updatePlayer();
+
+function updateHP() {
+  hpEl.textContent = hp;
+}
+
+window.addEventListener("keydown", (e) => {
+  if (!started || gameOver) return;
+
+  if (e.key === "p" || e.key === "P") {
+    togglePause();
+    return;
+  }
+
+  if (paused) return;
+
+  if ((e.key === "ArrowLeft" || e.key === "a" || e.key === "A") && playerLane > 0) playerLane--;
+  if ((e.key === "ArrowRight" || e.key === "d" || e.key === "D") && playerLane < 2) playerLane++;
+
+  updatePlayer();
+});
+
+function spawnObstacle() {
+  if (gameOver || !started || paused) return;
+
+  const obs = document.createElement("div");
+  obs.classList.add("obstacle");
+  obs.textContent = "☄️";
+
+  const lane = Math.floor(Math.random() * 3);
+  obs.dataset.lane = lane;
+  obs.style.left = (lane * 33.33 + 16.66) + "%";
+  obs.style.top = "-70px";
+
+  game.appendChild(obs);
+  obstacles.push(obs);
+}
+
+function togglePause() {
+  if (!started || gameOver) return;
+
+  paused = !paused;
+
+  if (paused) pauseScreen.style.display = "flex";
+  else pauseScreen.style.display = "none";
+}
+
+function endGame() {
+  gameOver = true;
+
+  if (score > highscore) {
+    highscore = score;
+    localStorage.setItem("space_runner_highscore", highscore);
+    highscoreEl.textContent = highscore;
+  }
+
+  setTimeout(() => {
+    alert("Game Over! Pisteet: " + score);
+    location.reload();
+  }, 100);
+}
+
+function gameLoop() {
+  if (gameOver || !started) {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  if (!paused) {
+    obstacles.forEach((obs, i) => {
+      let top = parseInt(obs.style.top);
+      top += 6;
+      obs.style.top = top + "px";
+
+      if (top > window.innerHeight) {
+        obs.remove();
+        obstacles.splice(i, 1);
+
+        score++;
+        scoreEl.textContent = score;
+      }
+
+      const hitZone = window.innerHeight - 100;
+      const safeZone = window.innerHeight - 40;
+
+      if (
+        parseInt(obs.dataset.lane) === playerLane &&
+        top > hitZone &&
+        top < safeZone
+      ) {
+        hp--;
+        updateHP();
+
+        obs.remove();
+        obstacles.splice(i, 1);
+
+        if (hp <= 0) {
+          endGame();
+        } else {
+          playerLane = 1;
+          updatePlayer();
+        }
+      }
+    });
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+startBtn.addEventListener("click", () => {
+  started = true;
+  startScreen.style.display = "none";
+
+  spawnInterval = setInterval(spawnObstacle, 900);
+  gameLoop();
+});
+</script>
+</body>
+</html>

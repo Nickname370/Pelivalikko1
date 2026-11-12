@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tekstisekoittimet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1e272e;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: #2f3640;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            color: #00a8ff;
+            font-size: 28px;
+        }
+
+        .valikko {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .linkki-nappi {
+            display: block;
+            padding: 15px;
+            background-color: #3b3b3b;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Jokaiselle napille oma korostusväri kun hiiri viedään päälle */
+        .linkki-nappi:nth-child(1):hover {
+            background-color: #2ecc71;
+            border-color: #2ecc71;
+            transform: translateY(-2px);
+        }
+
+        .linkki-nappi:nth-child(2):hover {
+            background-color: #9b59b6;
+            border-color: #9b59b6;
+            transform: translateY(-2px);
+        }
+
+        .linkki-nappi:nth-child(3):hover {
+            background-color: #00a8ff;
+            border-color: #00a8ff;
+            transform: translateY(-2px);
+        }
+		
+		.linkki-nappi:nth-child(4):hover {
+            background-color: grey;
+            border-color: grey;
+            transform: translateY(-2px);
+        }
+
+        p {
+            color: #a4b0be;
+            font-size: 14px;
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Tekstisekoittimet</h1>
+    
+    <div class="valikko">
+        <a href="sekoilu.html" class="linkki-nappi">1. Täysi Sanansekoittaja</a>
+        <a href="sekoilu2.html" class="linkki-nappi">2. Keskiosan Sekoittaja</a>
+        <a href="sekoilu3.html" class="linkki-nappi">3. Kirjainten Aakkosjärjestäjä</a>
+		<a href="Salainen.html" class="linkki-nappi">⬅️ Takaisin</a>
+    </div>
+
+</div>
+
+</body>
+</html>

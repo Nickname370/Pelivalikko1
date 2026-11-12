@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keskiosan Sekoittaja</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            border-color: #9b59b6;
+            outline: none;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            background-color: #9b59b6;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #8e44ad;
+        }
+
+        .tulos-alue {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 6px;
+            border-left: 5px solid #9b59b6;
+            min-height: 50px;
+            white-space: pre-wrap;
+            font-size: 16px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Keskiosan Sekoittaja</h1>
+    
+    <label for="alkuperainen">Kirjoita teksti tähän:</label>
+    <textarea id="alkuperainen" placeholder="Kirjoita tähän teksti, jonka haluat sekoittaa..."></textarea>
+    
+    <button onclick="sekoitaTeksti()">Sekoita keskiosat!</button>
+    
+    <label>Sekoitettu lopputulos:</label>
+    <div id="tulos" class="tulos-alue">Tulos ilmestyy tähän...</div>
+<a href="sekoilu0.html" style="position: absolute; top: 10px; right: 20px; padding: 10px 14px; font-size: 16px; cursor: pointer; text-decoration: none; background-color: #f1f2f6; color: #333; border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif;">
+  ⬅️ Takaisin
+</a>
+
+</div>
+
+<script>
+    // Funktio sekoittaa vain sanan keskellä olevat kirjaimet
+    function sekoitaKeskiosa(sana) {
+        if (sana.length <= 3) return sana; // Ei tarvitse sekoittaa lyhyitä sanoja
+
+        let eka = sana[0];
+        let vika = sana[sana.length - 1];
+        let keskiosa = sana.substring(1, sana.length - 1).split('');
+
+        // Fisher-Yates sekoitus keskiosalle
+        for (let i = keskiosa.length - 1; i > 0; i--) {
+            let j = Math.floor(Math.random() * (i + 1));
+            let temp = keskiosa[i];
+            keskiosa[i] = keskiosa[j];
+            keskiosa[j] = temp;
+        }
+
+        return eka + keskiosa.join('') + vika;
+    }
+
+    function sekoitaTeksti() {
+        const syote = document.getElementById('alkuperainen').value;
+        
+        // Tunnistaa suomen kielen kirjaimet ja sekoittaa vain ne
+        const sekoitettu = syote.replace(/[a-zA-ZåäöÅÄÖ]+/g, function(sana) {
+            return sekoitaKeskiosa(sana);
+        });
+
+        document.getElementById('tulos').innerText = sekoitettu || "Kirjoita ensin tekstiä kenttään.";
+    }
+</script>
+
+</body>
+</html>

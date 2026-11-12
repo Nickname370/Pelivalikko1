@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Matopeli</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      color: white;
+      flex-direction: column;
+    }
+
+    canvas {
+      background: #222;
+      border: 4px solid #4caf50;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #score,
+    #highscore {
+      margin: 5px;
+      font-size: 24px;
+    }
+
+    #gameOver {
+      display: none;
+      font-size: 36px;
+      color: red;
+      margin-top: 15px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      border: none;
+      background: #4caf50;
+      color: white;
+      border-radius: 8px;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🐍 Matopeli</h1>
+  <p>LIIKU = WASD  |  Syö omenoita ja kasva | Älä osu seiniin</p>
+
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html.html">
+    <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+  </a>
+
+  <div id="score">Pisteet: 0</div>
+  <div id="highscore">Ennätys: 0</div>
+
+  <canvas id="game" width="400" height="400"></canvas>
+
+  <div id="gameOver">GAME OVER</div>
+
+  <button onclick="restartGame()">Uudestaan</button>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const box = 20;
+    const canvasSize = 400;
+
+    let snake;
+    let direction;
+    let food;
+    let score;
+    let game;
+	let paused = false;
+
+    // Haetaan tallennettu highscore
+    let highscore = localStorage.getItem("snakeHighscore") || 0;
+
+    document.getElementById("highscore").innerText =
+      "Ennätys: " + highscore;
+
+function initGame() {
+  // Lisätään toinen pala pään viereen (koko 2)
+  snake = [
+    { x: 9 * box, y: 10 * box }, // Pää
+    { x: 8 * box, y: 10 * box }  // Häntä
+  ];
+  direction = "RIGHT";
+
+
+      food = {
+        x: Math.floor(Math.random() * 20) * box,
+        y: Math.floor(Math.random() * 20) * box
+      };
+
+      score = 0;
+
+      document.getElementById("score").innerText =
+        "Pisteet: " + score;
+
+      document.getElementById("gameOver").style.display = "none";
+
+      clearInterval(game);
+      game = setInterval(draw, 160);
+    }
+
+    document.addEventListener("keydown", changeDirection);
+
+ function changeDirection(event) {
+  const key = event.key.toLowerCase();
+
+  // Pause P-näppäimellä
+  if (key === "p") {
+    paused = !paused;
+    return;
+  }
+
+  if (key === "a" && direction !== "RIGHT") {
+        direction = "LEFT";
+      } else if (key === "w" && direction !== "DOWN") {
+        direction = "UP";
+      } else if (key === "d" && direction !== "LEFT") {
+        direction = "RIGHT";
+      } else if (key === "s" && direction !== "UP") {
+        direction = "DOWN";
+      }
+    }
+
+    function collision(head, array) {
+      for (let i = 0; i < array.length; i++) {
+        if (head.x === array[i].x && head.y === array[i].y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function draw() {
+	
+	// Jos peli pausella
+if (paused) {
+
+  ctx.fillStyle = "white";
+  ctx.font = "40px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("PAUSE", -2, -2);
+
+  return;
+}
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+      // Ruoka
+      ctx.fillStyle = "red";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      // Mato
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "#4caf50" : "#8bc34a";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+
+        ctx.strokeStyle = "#111";
+        ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      let snakeX = snake[0].x;
+      let snakeY = snake[0].y;
+
+      if (direction === "LEFT") snakeX -= box;
+      if (direction === "UP") snakeY -= box;
+      if (direction === "RIGHT") snakeX += box;
+      if (direction === "DOWN") snakeY += box;
+
+      // Syö ruoka
+      if (snakeX === food.x && snakeY === food.y) {
+        score++;
+
+        document.getElementById("score").innerText =
+          "Score: " + score;
+
+        // Päivitä highscore
+        if (score > highscore) {
+          highscore = score;
+
+          localStorage.setItem(
+            "snakeHighscore",
+            highscore
+          );
+
+          document.getElementById("highscore").innerText =
+            "Highscore: " + highscore;
+        }
+
+        food = {
+          x: Math.floor(Math.random() * 20) * box,
+          y: Math.floor(Math.random() * 20) * box
+        };
+
+      } else {
+        snake.pop();
+      }
+
+      const newHead = {
+        x: snakeX,
+        y: snakeY
+      };
+
+      // Game over
+      if (
+        snakeX < 0 ||
+        snakeY < 0 ||
+        snakeX >= canvasSize ||
+        snakeY >= canvasSize ||
+        collision(newHead, snake)
+      ) {
+        clearInterval(game);
+        document.getElementById("gameOver").style.display = "block";
+        return;
+      }
+
+      snake.unshift(newHead);
+    }
+
+    function restartGame() {
+      initGame();
+    }
+
+    initGame();
+  </script>
+
+</body>
+</html>

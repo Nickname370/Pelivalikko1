@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Kylien Varjot</title>
+
+<style>
+body{
+  font-family:Arial;
+  text-align:center;
+  background:#e6f2ff;
+  margin:0;
+}
+
+#toolbar{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:10px;
+}
+
+button{
+  padding:10px;
+  cursor:pointer;
+  border:2px solid #666;
+  background:white;
+}
+
+button.active{
+  background:#66ccff;
+  border-color:#000;
+}
+
+canvas{
+  border:2px solid #333;
+  background:#b3e6b3;
+}
+
+#startScreen{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  color:white;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+}
+</style>
+</head>
+
+<body>
+
+<div id="startScreen">
+  <h1>Valitse maailma</h1>
+
+  <button onclick="startGame(0)">Vaaka Joki</button>
+  <button onclick="startGame(1)">Pysty Joki</button>
+  <button onclick="startGame(2)">Neliö Järvi</button>
+  <br>
+  <br>
+  <a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+    <button class="valikko" style="transition: all 0.3s ease; position:absolute; top:550px; right:520px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin Pelivalikkoon</button>
+  </a>
+</div>
+
+<h1>Kylien Varjot</h1>
+<div id="info">
+    Valitse = Hiiren Vasen | Rakenna = Hiiren Vasen / Hiiren Oikea
+</div>
+
+<div id="toolbar">
+
+  <button id="roadBtn" onclick="setMode('road')">
+    Tie
+  </button>
+
+  <button id="houseBtn" onclick="setMode('house')">
+    Talo
+  </button>
+
+  <button id="shopBtn" onclick="setMode('shop')">
+    Kauppa
+  </button>
+
+  <button id="waterBtn" onclick="setMode('water')">
+    Vesi
+  </button>
+
+  <button id="landBtn" onclick="setMode('land')">
+    Maa
+  </button>
+
+  <button id="eraseBtn" onclick="setMode('erase')">
+    Poista
+  </button>
+
+  <button onclick="saveGame()">
+    Valikko
+  </button>
+
+</div>
+
+<canvas id="game" width="600" height="600"></canvas>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+ctx.font="16px Arial";
+
+const size=30;
+const cols=canvas.width/size;
+const rows=canvas.height/size;
+
+let mode="road";
+let currentMap=0;
+let mouseDown=false;
+
+let grid=[];
+
+/*
+0 = maa
+1 = tie
+2 = talo
+3 = kauppa
+4 = vesi
+*/
+
+function createGrid(){
+  let g=[];
+
+  for(let y=0;y<rows;y++){
+    g[y]=[];
+
+    for(let x=0;x<cols;x++){
+      g[y][x]=0;
+    }
+  }
+
+  return g;
+}
+
+function loadMap(i){
+
+  let g=createGrid();
+
+  if(i===0){
+
+    let r=Math.floor(rows/2);
+
+    for(let x=0;x<cols;x++){
+      g[r][x]=4;
+    }
+  }
+
+  if(i===1){
+
+    let c=Math.floor(cols/3);
+
+    for(let y=0;y<rows;y++){
+      g[y][c]=4;
+    }
+  }
+
+  if(i===2){
+
+    for(let y=6;y<10;y++){
+      for(let x=6;x<10;x++){
+        g[y][x]=4;
+      }
+    }
+  }
+
+  return g;
+}
+
+function startGame(i){
+
+  currentMap=i;
+
+  let save=localStorage.getItem("citySave");
+
+  if(save){
+
+    let data=JSON.parse(save);
+
+    if(data.map===i){
+      grid=data.grid;
+    }else{
+      grid=loadMap(i);
+    }
+
+  }else{
+    grid=loadMap(i);
+  }
+
+  document.getElementById("startScreen").style.display="none";
+}
+
+function saveGame(){
+
+  localStorage.setItem("citySave",JSON.stringify({
+    map:currentMap,
+    grid:grid
+  }));
+
+  document.getElementById("startScreen").style.display="flex";
+}
+
+function setMode(newMode){
+
+  mode=newMode;
+
+  document
+    .querySelectorAll("#toolbar button")
+    .forEach(btn=>btn.classList.remove("active"));
+
+  if(mode==="road")
+    document.getElementById("roadBtn").classList.add("active");
+
+  if(mode==="house")
+    document.getElementById("houseBtn").classList.add("active");
+
+  if(mode==="shop")
+    document.getElementById("shopBtn").classList.add("active");
+
+  if(mode==="water")
+    document.getElementById("waterBtn").classList.add("active");
+
+  if(mode==="land")
+    document.getElementById("landBtn").classList.add("active");
+
+  if(mode==="erase")
+    document.getElementById("eraseBtn").classList.add("active");
+}
+
+function paint(x,y){
+
+  if(x<0||y<0||x>=cols||y>=rows) return;
+
+  if(mode==="road") grid[y][x]=1;
+
+  if(mode==="house"){
+    if(grid[y][x]!==4)
+      grid[y][x]=2;
+  }
+
+  if(mode==="shop"){
+    if(grid[y][x]!==4)
+      grid[y][x]=3;
+  }
+
+  if(mode==="water") grid[y][x]=4;
+
+  if(mode==="land") grid[y][x]=0;
+
+  if(mode==="erase") grid[y][x]=0;
+}
+
+canvas.addEventListener("mousedown",(e)=>{
+
+  mouseDown=true;
+
+  let x=Math.floor(e.offsetX/size);
+  let y=Math.floor(e.offsetY/size);
+
+  paint(x,y);
+});
+
+canvas.addEventListener("mouseup",()=>{
+  mouseDown=false;
+});
+
+canvas.addEventListener("mouseleave",()=>{
+  mouseDown=false;
+});
+
+canvas.addEventListener("mousemove",(e)=>{
+
+  if(!mouseDown) return;
+
+  let x=Math.floor(e.offsetX/size);
+  let y=Math.floor(e.offsetY/size);
+
+  paint(x,y);
+});
+
+function draw(){
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(let y=0;y<rows;y++){
+
+    for(let x=0;x<cols;x++){
+
+      let cell=grid[y][x];
+
+      ctx.strokeStyle="#999";
+      ctx.strokeRect(x*size,y*size,size,size);
+
+      // maa
+      if(cell===0){
+
+        ctx.fillStyle="#7cfc70";
+        ctx.fillRect(x*size,y*size,size,size);
+      }
+
+      // tie
+      if(cell===1){
+
+        ctx.fillStyle="#666";
+        ctx.fillRect(x*size,y*size,size,size);
+      }
+
+      // talo
+      if(cell===2){
+
+        ctx.fillStyle="#ffcc66";
+        ctx.fillRect(x*size,y*size,size,size);
+
+        ctx.fillStyle="#000";
+        ctx.fillText("🏠",x*size+6,y*size+20);
+      }
+
+      // kauppa
+      if(cell===3){
+
+        ctx.fillStyle="#66ccff";
+        ctx.fillRect(x*size,y*size,size,size);
+
+        ctx.fillStyle="#000";
+        ctx.fillText("🏪",x*size+6,y*size+20);
+      }
+
+      // vesi
+      if(cell===4){
+
+        ctx.fillStyle="#3399ff";
+        ctx.fillRect(x*size,y*size,size,size);
+      }
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+grid=createGrid();
+
+setMode("road");
+
+startGame(0);
+
+draw();
+
+</script>
+
+</body>
+</html>

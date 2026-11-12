@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Alien hyökkäys simulaattori</title>
+
+<style>
+body {
+    background: black;
+    color: white;
+    text-align: center;
+    font-family: Arial;
+}
+
+canvas {
+    background: radial-gradient(circle at center, #000 60%, #020024 100%);
+    border: 2px solid white;
+}
+
+.controls {
+    margin: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.control-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+</style>
+</head>
+
+<body>
+
+<h1>👽 Alien hyökkäys simulaattori</h1>
+<a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+  <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+</a>
+
+<div class="controls">
+
+<div class="control-box">
+Armeija: <span id="armyVal">10</span>
+<input type="range" min="1" max="100" value="10" id="army">
+</div>
+
+<div class="control-box">
+Aseet: <span id="powerVal">5</span>
+<input type="range" min="1" max="100" value="5" id="power">
+</div>
+
+<div class="control-box">
+Level: <span id="levelVal">1</span>
+<input type="range" min="1" max="10" value="1" id="level">
+</div>
+
+<button onclick="launch()">🚀 Hyökkää</button>
+
+</div>
+
+<canvas id="game" width="900" height="600"></canvas>
+<h2 id="secret" style="color: gold;"></h2>
+<h2 id="score">Tuho: 0</h2>
+
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let aliens = [];
+let explosions = [];
+let score = 0;
+let cheatBuffer = "";
+
+const earth = {
+    x: canvas.width / 2,
+    y: canvas.height + 45,
+    r: 300
+};
+
+// sliders
+const armySlider = document.getElementById("army");
+const powerSlider = document.getElementById("power");
+const levelSlider = document.getElementById("level");
+
+const armyVal = document.getElementById("armyVal");
+const powerVal = document.getElementById("powerVal");
+const levelVal = document.getElementById("levelVal");
+
+armySlider.oninput = () => armyVal.innerText = armySlider.value;
+powerSlider.oninput = () => powerVal.innerText = powerSlider.value;
+levelSlider.oninput = () => levelVal.innerText = levelSlider.value;
+
+// 🚀 uusi hyökkäys (RESET FIX)
+function launch(){
+    aliens = [];
+    explosions = [];
+    score = 0; // 🔥 TÄRKEÄ RESET
+
+    let army = Number(armySlider.value);
+    let power = Number(powerSlider.value);
+    let level = Number(levelSlider.value);
+
+    for(let i = 0; i < army; i++){
+
+        let isBoss = Math.random() < level * 0.1;
+
+        aliens.push({
+            x: Math.random() * canvas.width,
+            y: -Math.random() * 200,
+            speed: Math.random() * 2 + 1,
+            power: isBoss ? power * 3 : power,
+            boss: isBoss
+        });
+    }
+}
+
+// 🌍 PARANNETTU MAAPALLO
+function drawEarth(){
+
+    // meri (3D glow)
+    let gradient = ctx.createRadialGradient(
+        earth.x - 40, earth.y - 40, 50,
+        earth.x, earth.y, earth.r
+    );
+
+    gradient.addColorStop(0, "#66ccff");
+    gradient.addColorStop(0.6, "#0066aa");
+    gradient.addColorStop(1, "#001f3f");
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(earth.x, earth.y, earth.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 🌿 mantereet
+
+    ctx.fillStyle = "rgba(0,255,120,0.55)";
+
+    // Eurooppa / Aasia
+    ctx.beginPath();
+    ctx.ellipse(earth.x + 90, earth.y - 120, 130, 80, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Afrikka
+    ctx.beginPath();
+    ctx.ellipse(earth.x + 40, earth.y - 10, 70, 120, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Amerikka
+    ctx.beginPath();
+    ctx.ellipse(earth.x - 150, earth.y - 60, 80, 140, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 🌑 varjopuoli (pieni “shadow feel”)
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.beginPath();
+    ctx.arc(earth.x + 80, earth.y - 30, earth.r * 0.95, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// 💥 räjähdys
+function createExplosion(x, y){
+    explosions.push({ x, y, r: 0 });
+}
+
+// 🎮 loop
+function update(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawEarth();
+
+    // 👽 aliens
+    for(let i = aliens.length - 1; i >= 0; i--){
+        let a = aliens[i];
+
+        a.y += a.speed;
+
+        let dx = a.x - earth.x;
+        let dy = a.y - earth.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+
+        if(dist < earth.r){
+            score += a.power;
+            createExplosion(a.x, a.y);
+            aliens.splice(i, 1);
+            continue;
+        }
+
+        ctx.fillStyle = a.boss ? "red" : "lime";
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.boss ? 10 : 5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 💥 explosions
+    explosions.forEach(e => {
+        e.r += 2;
+
+        ctx.strokeStyle = "red";
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.r, 0, Math.PI * 0.4);
+        ctx.stroke();
+    });
+
+    document.getElementById("score").innerText = "Tuho: " + score;
+	if(score >= 20000 && !window.secretShown){
+    window.secretShown = true;
+    document.getElementById("secret").innerText =
+        "Pelaa peliä 645778";
+}
+
+    requestAnimationFrame(update);
+}
+
+update();
+
+document.addEventListener("keydown", (e) => {
+    cheatBuffer += e.key.toLowerCase();
+
+    // pidetään buffer lyhyenä
+    if(cheatBuffer.length > 10){
+        cheatBuffer = cheatBuffer.slice(-10);
+    }
+
+    if(cheatBuffer.includes("hack")){
+        score += 1000;
+
+        document.getElementById("cheatMsg").innerText =
+            "+1000 TUHOA!";
+
+        cheatBuffer = ""; // estää spämmin
+    }
+});
+
+</script>
+
+</body>
+</html>

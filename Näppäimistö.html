@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Sekoileva Näppäimistö</title>
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#222;
+  color:white;
+  text-align:center;
+}
+#hud{
+  margin-top:20px;
+}
+#target {
+  font-size:60px;
+  margin-top:20px;
+  letter-spacing:10px;
+}
+#typed {
+  font-size:30px;
+  margin-top:10px;
+  color:#7CFC00;
+}
+#keyboard {
+  position:absolute;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns: repeat(10, 70px);
+  gap:5px;
+}
+.key {
+  width:70px;
+  height:70px;
+  background:#444;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  border-radius:9px;
+  user-select:none;
+}
+.key:active {
+  background:#888;
+}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div>Pisteet: <span id="score">0</span> | Ennätys: <span id="highscore">0</span></div>
+</div>
+
+<h2>Kirjoita alla oleva sana.</h2>
+
+<a href="https://nickname370.github.io/AloitusTest11/valikko3.html">
+  <button style="position:absolute; top:20px; right:20px; padding:10px 14px; font-size:16px; cursor:pointer;">⬅️ Takaisin</button>
+</a>
+
+<div id="target"></div>
+<div id="typed"></div>
+
+<div id="keyboard"></div>
+
+<script>
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZÖÄÅ1234567890_".split("");
+
+let targetText = "HELLO";
+let typed = "";
+let score = 0;
+let highscore = localStorage.getItem("typingHigh") || 0;
+
+const targetDiv = document.getElementById("target");
+const typedDiv = document.getElementById("typed");
+const keyboard = document.getElementById("keyboard");
+const scoreDiv = document.getElementById("score");
+const highscoreDiv = document.getElementById("highscore");
+
+function randomWord(){
+  let words = [
+  "56165","OLEN_ROBOTTI","TERVE","MAAILMA","ABCD","KOODI","YRITÄTKÖ","SINÄ",
+  "NÄPPÄIMISTÖ", "TÄÄLLÄ","CHATGPT","A1B2C3D4","APUA","NICKNAME370","A1B2","X9Z",
+  "K7L3","M4N8","Q1W2","R9T5","Z0X1","P3Q7","L8K2","V6B9","OHJELMOINTI",
+  "TIETOKONE","PELIOHJELMA","KIRJOITUS","NOPEUS","TARKKUUS","KOTI","AUTO","PUU",
+  "VESI","TALO","AUTTAKAA","KOIRA","KISSA","PELAA","KIRJA","PÖYTÄ","TUOLI",
+  "IKKUNA","OVI","KONE","KATU","KYLÄ","METSÄ","JÄRVI","SAARI","TIE","LUMI",
+  "TULI","MAA","ILMA","KALA","LINTU","PÄIVÄ","YÖ","VALO","VARJO",
+  "MINÄ_OLEN_JUMISSA_TÄMÄN_PELIN_SISÄLLÄ","SEKAISIN","HULLU","265GXA64N","1II1I11",
+  "SATAA","HEH_HEH_HEE"
+  ];
+  return words[Math.floor(Math.random()*words.length)];
+}
+
+function shuffle(arr){
+  return arr.sort(() => Math.random() - 0.5);
+}
+
+function render(){
+  targetDiv.textContent = targetText;
+  typedDiv.textContent = typed;
+  scoreDiv.textContent = score;
+  highscoreDiv.textContent = highscore;
+}
+
+function createKeyboard(){
+  keyboard.innerHTML = "";
+  let shuffled = shuffle([...letters]);
+
+  shuffled.forEach(l => {
+    let btn = document.createElement("div");
+    btn.className = "key";
+    btn.textContent = l;
+
+    btn.onclick = () => {
+      typed += l;
+
+      createKeyboard(); // shuffle every click
+
+      if(targetText.startsWith(typed)){
+        if(typed === targetText){
+          score++;
+
+          if(score > highscore){
+            highscore = score;
+            localStorage.setItem("typingHigh", highscore);
+          }
+
+          setTimeout(() => {
+            typed = "";
+            targetText = randomWord();
+            render();
+          }, 100);
+        }
+      } else {
+        typed = "";
+      }
+
+      render();
+    };
+
+    keyboard.appendChild(btn);
+  });
+}
+
+function init(){
+  targetText = randomWord();
+  typed = "";
+  score = 0;
+  render();
+  createKeyboard();
+}
+
+init();
+</script>
+
+</body>
+</html>

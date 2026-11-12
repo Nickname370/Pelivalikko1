@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T-paidan suunnittelija</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f0f0f0;
+}
+
+.container{
+    display:flex;
+    flex-wrap:wrap;
+    gap:20px;
+    padding:20px;
+}
+
+.controls{
+    width:320px;
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.2);
+    max-height:90vh;
+    overflow:auto;
+}
+
+.controls label{
+    display:block;
+    margin-top:10px;
+    font-weight:bold;
+}
+
+input{
+    width:100%;
+    margin-top:5px;
+}
+
+button{
+    width:100%;
+    margin-top:15px;
+    padding:10px;
+    cursor:pointer;
+}
+
+canvas{
+    background:#ddd;
+    border-radius:10px;
+    cursor:move;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="controls">
+
+<h2>T-paidan suunnittelija</h2>
+
+<label>Teksti</label>
+<input id="textInput" type="text" value="OMA TEKSTI">
+
+<label>Tekstin koko</label>
+<input id="fontSize" type="range" min="10" max="100" value="40">
+
+<label>Tekstin väri</label>
+<input id="textColor" type="color" value="#000000">
+
+<hr>
+
+<label>Lisää kuva</label>
+<input id="imageUpload" type="file" accept="image/*">
+
+<label>Kuvan koko</label>
+<input id="imageSizeSlider" type="range" min="20" max="500" value="150">
+
+<h3>Kuvan rajaus</h3>
+
+<label>Rajaus X</label>
+<input id="cropX" type="range" min="0" max="2000" value="0">
+
+<label>Rajaus Y</label>
+<input id="cropY" type="range" min="0" max="2000" value="0">
+
+<label>Rajauksen leveys</label>
+<input id="cropW" type="range" min="10" max="2000" value="100">
+
+<label>Rajauksen korkeus</label>
+<input id="cropH" type="range" min="10" max="2000" value="100">
+
+<button onclick="downloadDesign()">
+💾 Tallenna PNG
+</button>
+
+<a href="Salainen.html" style="position: absolute; top: 10px; right: 20px; padding: 10px 14px; font-size: 16px; cursor: pointer; text-decoration: none; background-color: #f1f2f6; color: #333; border: 1px solid #ccc; border-radius: 4px; font-family: Arial, sans-serif;">
+  ⬅️ Takaisin
+</a>
+
+</div>
+
+<canvas id="canvas" width="700" height="700"></canvas>
+
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const textInput = document.getElementById("textInput");
+const fontSizeInput = document.getElementById("fontSize");
+const textColorInput = document.getElementById("textColor");
+const imageUpload = document.getElementById("imageUpload");
+const imageSizeSlider = document.getElementById("imageSizeSlider");
+
+let textX = 350;
+let textY = 250;
+
+let imageX = 350;
+let imageY = 450;
+let imageSize = 150;
+
+let uploadedImage = null;
+
+let cropX = 0;
+let cropY = 0;
+let cropW = 100;
+let cropH = 100;
+
+let dragging = null;
+
+function drawShirt(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // T-paita
+    ctx.fillStyle = "white";
+
+    ctx.beginPath();
+    ctx.moveTo(220,120);
+    ctx.lineTo(160,180);
+    ctx.lineTo(100,140);
+    ctx.lineTo(50,240);
+    ctx.lineTo(150,300);
+    ctx.lineTo(150,620);
+    ctx.lineTo(550,620);
+    ctx.lineTo(550,300);
+    ctx.lineTo(650,240);
+    ctx.lineTo(600,140);
+    ctx.lineTo(540,180);
+    ctx.lineTo(480,120);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Kaula
+    ctx.beginPath();
+    ctx.arc(350,140,45,0,Math.PI,true);
+    ctx.stroke();
+
+    // Teksti
+    ctx.fillStyle = textColorInput.value;
+    ctx.font = fontSizeInput.value + "px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(textInput.value,textX,textY);
+
+    // Kuva
+    if(uploadedImage){
+
+        const safeW = Math.max(1,cropW);
+        const safeH = Math.max(1,cropH);
+
+        ctx.drawImage(
+            uploadedImage,
+            cropX,
+            cropY,
+            safeW,
+            safeH,
+            imageX - imageSize/2,
+            imageY - imageSize/2,
+            imageSize,
+            imageSize
+        );
+
+        // Valintakehys
+        ctx.strokeStyle="red";
+        ctx.strokeRect(
+            imageX-imageSize/2,
+            imageY-imageSize/2,
+            imageSize,
+            imageSize
+        );
+    }
+}
+
+textInput.addEventListener("input",drawShirt);
+fontSizeInput.addEventListener("input",drawShirt);
+textColorInput.addEventListener("input",drawShirt);
+
+imageSizeSlider.addEventListener("input",()=>{
+    imageSize = Number(imageSizeSlider.value);
+    drawShirt();
+});
+
+imageUpload.addEventListener("change",e=>{
+
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(ev){
+
+        uploadedImage = new Image();
+
+        uploadedImage.onload = ()=>{
+
+            cropX = 0;
+            cropY = 0;
+            cropW = uploadedImage.width;
+            cropH = uploadedImage.height;
+
+            document.getElementById("cropW").value =
+                uploadedImage.width;
+
+            document.getElementById("cropH").value =
+                uploadedImage.height;
+
+            drawShirt();
+        };
+
+        uploadedImage.src = ev.target.result;
+    };
+
+    reader.readAsDataURL(file);
+});
+
+document.getElementById("cropX")
+.addEventListener("input",e=>{
+    cropX = Number(e.target.value);
+    drawShirt();
+});
+
+document.getElementById("cropY")
+.addEventListener("input",e=>{
+    cropY = Number(e.target.value);
+    drawShirt();
+});
+
+document.getElementById("cropW")
+.addEventListener("input",e=>{
+    cropW = Number(e.target.value);
+    drawShirt();
+});
+
+document.getElementById("cropH")
+.addEventListener("input",e=>{
+    cropH = Number(e.target.value);
+    drawShirt();
+});
+
+canvas.addEventListener("mousedown",e=>{
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const textWidth =
+        ctx.measureText(textInput.value).width;
+
+    if(
+        x > textX-textWidth/2 &&
+        x < textX+textWidth/2 &&
+        y > textY-50 &&
+        y < textY+20
+    ){
+        dragging="text";
+        return;
+    }
+
+    if(
+        uploadedImage &&
+        x > imageX-imageSize/2 &&
+        x < imageX+imageSize/2 &&
+        y > imageY-imageSize/2 &&
+        y < imageY+imageSize/2
+    ){
+        dragging="image";
+    }
+});
+
+canvas.addEventListener("mousemove",e=>{
+
+    if(!dragging) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if(dragging==="text"){
+        textX=x;
+        textY=y;
+    }
+
+    if(dragging==="image"){
+        imageX=x;
+        imageY=y;
+    }
+
+    drawShirt();
+});
+
+canvas.addEventListener("mouseup",()=>{
+    dragging=null;
+});
+
+canvas.addEventListener("mouseleave",()=>{
+    dragging=null;
+});
+
+function downloadDesign(){
+
+    const link = document.createElement("a");
+    link.download = "tpaita.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+}
+
+drawShirt();
+</script>
+
+</body>
+</html>
